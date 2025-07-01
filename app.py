@@ -257,23 +257,37 @@ elif choice == "Feedback":
     st.subheader("⭐ Rate Your Experience")
     st.markdown("We’d love to hear how your experience was using the app!")
 
-    # Star rating (1 to 5)
-    rating = st.slider("Your rating (1 = worst, 5 = best)", min_value=1, max_value=5, value=3)
+    # Simulated star rating with emojis
+    st.markdown("### Select Star Rating:")
+
+    if 'star_rating' not in st.session_state:
+        st.session_state.star_rating = 0
+
+    cols = st.columns(5)
+    for i in range(5):
+        if cols[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
+            st.session_state.star_rating = i + 1
+
+    st.markdown(f"**Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}**")
 
     # Optional comment
-    comment = st.text_area("Any comments? (Optional)", max_chars=300)
+    comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
 
     if st.button("Submit Feedback"):
-        with feedback_engine.connect() as conn:
-            conn.execute(
-                text("""
-                    INSERT INTO feedback (username, message) 
-                    VALUES (:u, :m)
-                """),
-                {
-                    "u": st.session_state.user,
-                    "m": f"Rating: {rating} stars | Comment: {comment.strip() if comment else 'No comment'}"
-                }
-            )
-            conn.commit()
-        st.success("✅ Thanks for your feedback!")
+        if st.session_state.star_rating == 0:
+            st.warning("⚠ Please select a star rating before submitting.")
+        else:
+            with feedback_engine.connect() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO feedback (username, message) 
+                        VALUES (:u, :m)
+                    """),
+                    {
+                        "u": st.session_state.user,
+                        "m": f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() if comment else 'No comment'}"
+                    }
+                )
+                conn.commit()
+            st.success("✅ Thanks for your feedback!")
+            st.session_state.star_rating = 0
