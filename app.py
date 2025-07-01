@@ -351,7 +351,6 @@ else:
     from prophet.plot import plot_components_plotly
     st.plotly_chart(plot_components_plotly(model, forecast), use_container_width=True)
 
-
     elif prediction_option == "Revenue Prediction Model":
         st.markdown("""
         ### 💰 Revenue Prediction Model
