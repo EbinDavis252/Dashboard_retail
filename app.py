@@ -155,13 +155,6 @@ choice = st.sidebar.selectbox("📂 Navigate", menu)
 # -------------------- UPLOAD --------------------
 if choice == "Upload Data":
     st.subheader("📤 Upload Sales CSV File")
-    with st.expander("📌 CSV Format Example"):
-        st.markdown("""
-        | date       | product     | region  | units_sold | revenue |
-        |------------|-------------|---------|------------|---------|
-        | 2024-06-01 | Widget A    | East    | 10         | 100     |
-        """)
-
     file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
         try:
@@ -264,17 +257,17 @@ elif choice == "Admin Panel":
     if st.session_state.user != "admin":
         st.warning("⛔ You are not authorized to view this page.")
     else:
-        # Feedback Table
-        st.markdown("### 🗣️ All Feedback")
         feedback_df = pd.read_sql("SELECT * FROM feedback ORDER BY submitted_at DESC", feedback_engine)
+
+        st.markdown("### 🗣️ All Feedback")
         if feedback_df.empty:
             st.info("No feedback submitted yet.")
         else:
             st.dataframe(feedback_df)
 
-            # Feedback Analytics
             st.markdown("### 📊 Feedback Analytics")
-            feedback_df['rating'] = feedback_df['message'].str.extract(r'Rating: (\\d)').astype(float)
+            # ✅ FIXED: Proper regex to extract numeric rating
+            feedback_df['rating'] = feedback_df['message'].str.extract(r'Rating:\s*(\d+)').astype(float)
             avg_rating = feedback_df['rating'].mean()
             st.metric("Average Rating", f"{avg_rating:.2f} ⭐")
 
@@ -284,10 +277,9 @@ elif choice == "Admin Panel":
 
             with st.expander("💬 View Sample Comments"):
                 comments = feedback_df[['username', 'message', 'submitted_at']].copy()
-                comments['Comment'] = comments['message'].str.extract(r'Comment: (.*)')
+                comments['Comment'] = comments['message'].str.extract(r'Comment:\s*(.*)')
                 st.dataframe(comments[['username', 'submitted_at', 'Comment']])
 
-        # Users Table
         st.markdown("### 👥 Registered Users")
         users_df = pd.read_sql("SELECT username FROM users", user_engine)
         st.success(f"**Total Users Registered:** {users_df.shape[0]}")
