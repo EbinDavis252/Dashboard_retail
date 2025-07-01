@@ -152,7 +152,7 @@ if st.sidebar.button("🚪 Logout"):
     st.rerun()
 
 # -------------------- MAIN MENU --------------------
-menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Admin Panel"]
+menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Predictions", "Admin Panel"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
 # -------------------- UPLOAD --------------------
@@ -312,3 +312,37 @@ elif choice == "Admin Panel":
         users_df = pd.read_sql("SELECT username FROM users", user_engine)
         st.success(f"**Total Users Registered:** {users_df.shape[0]}")
         st.dataframe(users_df)
+# -------------------- PREDICTIONS --------------------
+elif choice == "Predictions":
+    st.subheader("🔮 Predictive Insights")
+
+    prediction_option = st.selectbox("Select Prediction Type", [
+        "Sales Forecast (Time Series)",
+        "Revenue Prediction Model",
+        "Seasonality Analysis"
+    ])
+
+    if prediction_option == "Sales Forecast (Time Series)":
+        st.markdown("""
+        ### 📈 Sales Forecast (Time Series)
+        This uses historical sales data to forecast future sales using time series models (like ARIMA or Prophet).
+        Ideal for inventory planning and demand forecasting.
+        """)
+        st.info("🚧 Forecast logic is under development. Model training and prediction code can be added here.")
+
+    elif prediction_option == "Revenue Prediction Model":
+        st.markdown("""
+        ### 💰 Revenue Prediction Model
+        This model predicts revenue based on inputs like units sold, region, and product type.
+        Useful for setting revenue targets and monitoring deviations.
+        """)
+        st.info("🚧 Prediction logic will go here. You can use regression models to estimate future revenue.")
+
+    elif prediction_option == "Seasonality Analysis":
+        st.markdown("""
+        ### 📆 Seasonality Analysis
+        Identifies patterns and trends in sales that repeat over time (e.g., monthly, quarterly).
+        Helps optimize marketing and stocking strategies.
+        """)
+        st.info("🚧 Visual seasonality charts can be added using rolling means or decomposition plots.")
+
