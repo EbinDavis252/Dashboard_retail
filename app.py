@@ -3,28 +3,26 @@ import pandas as pd
 import sqlalchemy
 from sqlalchemy import text
 import plotly.express as px
-import seaborn as sns
-import matplotlib.pyplot as plt
 import hashlib
-from prophet import Prophet
-from prophet.plot import plot_plotly
 
+# -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="Retail Sales Dashboard", layout="wide")
 
-# ---------- Background ----------
+# -------------------- BACKGROUND --------------------
 st.markdown("""
     <style>
         .stApp {
-            background: linear-gradient(to right, #d3cce3, #e9e4f0);
+            background: linear-gradient(to right, #d7effb, #ecd2f7);
+            animation: gradient 15s ease infinite;
+            background-size: 400% 400%;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# ---------- Databases ----------
+# -------------------- DATABASE SETUP --------------------
 engine = sqlalchemy.create_engine('sqlite:///sales.db')
 user_engine = sqlalchemy.create_engine('sqlite:///users.db')
 
-# Create tables if not exist
 with user_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
@@ -36,12 +34,12 @@ with user_engine.connect() as conn:
         CREATE TABLE IF NOT EXISTS feedback (
             username TEXT,
             rating INTEGER,
-            comments TEXT
+            comment TEXT
         )
     """))
     conn.commit()
 
-# ---------- Helpers ----------
+# -------------------- AUTH HELPERS --------------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -59,6 +57,17 @@ def register_user(username, password):
         conn.commit()
     return True
 
+# -------------------- SALES DATA HELPERS --------------------
+def save_to_db(df):
+    try:
+        df.columns = df.columns.str.strip().str.lower()
+        df['date'] = pd.to_datetime(df['date'])
+        df.to_sql('sales', engine, if_exists='append', index=False)
+        return True
+    except Exception as e:
+        st.error(f"Error saving to DB: {e}")
+        return False
+
 def load_data():
     try:
         df = pd.read_sql("SELECT * FROM sales", engine)
@@ -67,172 +76,159 @@ def load_data():
     except:
         return pd.DataFrame()
 
+def clear_db():
+    with engine.connect() as conn:
+        conn.execute(text("DELETE FROM sales"))
+        conn.commit()
+
 @st.cache_data
 def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
 
-# ---------- Session ----------
+# -------------------- AUTH UI --------------------
 if 'auth' not in st.session_state:
     st.session_state.auth = False
-if 'user' not in st.session_state:
-    st.session_state.user = ''
+    st.session_state.username = ""
 
-# ---------- Login/Register ----------
 if not st.session_state.auth:
     st.sidebar.title("👤 User Login")
     tab1, tab2 = st.sidebar.tabs(["Login", "Register"])
+
     with tab1:
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
         if st.button("Login"):
             if verify_user(username, password):
                 st.session_state.auth = True
-                st.session_state.user = username
+                st.session_state.username = username
                 st.success("✅ Login successful!")
-                st.rerun()
+                st.experimental_rerun()
             else:
                 st.error("❌ Invalid credentials.")
+
     with tab2:
         new_user = st.text_input("New Username")
         new_pass = st.text_input("New Password", type="password")
         if st.button("Register"):
             if register_user(new_user, new_pass):
-                st.success("✅ Registered! You can now log in.")
+                st.success("✅ Registration successful! You can now log in.")
             else:
                 st.error("❌ Username already exists.")
     st.stop()
 
-# ---------- Sidebar ----------
-st.sidebar.markdown(f"👋 Welcome, **{st.session_state.user}**")
-if st.sidebar.button("🚪 Logout"):
-    st.session_state.auth = False
-    st.session_state.user = ""
-    st.rerun()
-
+# -------------------- MAIN MENU --------------------
 menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Predictions", "Admin Panel"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
-# ---------- Upload ----------
+st.sidebar.write(f"👋 Welcome, `{st.session_state.username}`")
+if st.sidebar.button("🔓 Logout"):
+    st.session_state.auth = False
+    st.session_state.username = ""
+    st.experimental_rerun()
+
+# -------------------- PAGES --------------------
 if choice == "Upload Data":
-    st.subheader("📤 Upload Sales CSV")
+    st.subheader("📤 Upload Sales CSV File")
     file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
-        try:
-            df = pd.read_csv(file)
-            df.columns = df.columns.str.strip().str.lower()
-            df['date'] = pd.to_datetime(df['date'])
-            st.dataframe(df)
-            if st.button("✅ Save to DB"):
-                df.to_sql('sales', engine, if_exists='append', index=False)
+        df = pd.read_csv(file)
+        st.dataframe(df)
+        if st.button("✅ Save to Database"):
+            if save_to_db(df):
                 st.success("Saved to database!")
-        except Exception as e:
-            st.error(f"Error: {e}")
+    if st.button("🔄 Clear All Data"):
+        clear_db()
+        st.success("Sales database cleared.")
 
-# ---------- View ----------
 elif choice == "View Data":
-    st.subheader("📑 Stored Sales Data")
+    st.subheader("📑 View Stored Sales Data")
     data = load_data()
     if data.empty:
         st.warning("⚠ No data found.")
     else:
         st.dataframe(data)
-        st.download_button("📥 Download CSV", convert_df(data), file_name="sales_data.csv")
+        st.download_button("📥 Download All Data", data=convert_df(data), file_name='sales_data.csv')
 
-# ---------- Dashboard ----------
 elif choice == "Dashboard":
     st.subheader("📊 Sales Dashboard")
     data = load_data()
     if data.empty:
-        st.warning("⚠ No data available.")
+        st.warning("⚠ No data found.")
     else:
-        col1, col2 = st.columns(2)
-        region = col1.selectbox("Select Region", ["All"] + list(data['region'].dropna().unique()))
-        product = col2.selectbox("Select Product", ["All"] + list(data['product'].dropna().unique()))
+        region = st.selectbox("🌍 Region", ["All"] + sorted(data['region'].dropna().unique()))
+        product = st.selectbox("📦 Product", ["All"] + sorted(data['product'].dropna().unique()))
+        start_date = st.date_input("📅 Start Date", data['date'].min())
+        end_date = st.date_input("📅 End Date", data['date'].max())
 
-        col3, col4 = st.columns(2)
-        start = col3.date_input("Start Date", data['date'].min())
-        end = col4.date_input("End Date", data['date'].max())
+        data = data[(data['date'] >= pd.to_datetime(start_date)) & (data['date'] <= pd.to_datetime(end_date))]
+        if region != "All": data = data[data['region'] == region]
+        if product != "All": data = data[data['product'] == product]
 
-        df = data[(data['date'] >= pd.to_datetime(start)) & (data['date'] <= pd.to_datetime(end))]
-        if region != "All":
-            df = df[df['region'] == region]
-        if product != "All":
-            df = df[df['product'] == product]
+        st.metric("💰 Total Revenue", f"${data['revenue'].sum():,.2f}")
+        st.metric("📦 Units Sold", f"{data['units_sold'].sum():,.0f}")
 
-        st.metric("Total Revenue", f"${df['revenue'].sum():,.2f}")
-        st.metric("Units Sold", f"{df['units_sold'].sum()}")
+        st.plotly_chart(px.line(data.groupby('date').revenue.sum().reset_index(), x='date', y='revenue'), use_container_width=True)
 
-        st.plotly_chart(px.line(df.groupby('date')['revenue'].sum().reset_index(), x='date', y='revenue'), use_container_width=True)
-
-# ---------- Feedback ----------
 elif choice == "Feedback":
-    st.subheader("⭐ Give Your Feedback")
-    st.markdown("### Rate Your Experience:")
-    stars = st.columns(5)
-    if 'star_rating' not in st.session_state:
-        st.session_state.star_rating = 0
-    for i in range(5):
-        if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
-            st.session_state.star_rating = i + 1
-    comment = st.text_area("💬 Comments (optional)")
-    if st.button("Submit Feedback"):
-        if st.session_state.star_rating == 0:
-            st.warning("⚠ Please rate before submitting.")
-        else:
+    st.subheader("📝 Submit Feedback")
+    with st.form("feedback_form"):
+        rating = st.slider("Rate the App", 1, 5)
+        comment = st.text_area("Additional Comments (optional)")
+        if st.form_submit_button("Submit"):
             with user_engine.connect() as conn:
-                conn.execute(text("INSERT INTO feedback (username, rating, comments) VALUES (:u, :r, :c)"),
-                             {"u": st.session_state.user, "r": st.session_state.star_rating, "c": comment})
+                conn.execute(text("INSERT INTO feedback (username, rating, comment) VALUES (:u, :r, :c)"),
+                             {"u": st.session_state.username, "r": rating, "c": comment})
                 conn.commit()
-            st.success("✅ Thanks for your feedback!")
-            st.session_state.star_rating = 0
+            st.success("Feedback submitted!")
 
-# ---------- Predictions ----------
 elif choice == "Predictions":
     st.subheader("🔮 Predictive Analytics")
-    pred_option = st.selectbox("Choose Prediction Type", [
+    prediction_option = st.selectbox("Select Prediction Type", [
         "Sales Forecast (Time Series)",
         "Revenue Prediction Model",
         "Seasonality Analysis"
     ])
 
-    if pred_option == "Sales Forecast (Time Series)":
-        st.markdown("Using Prophet to forecast future sales.")
-        df = load_data()
-        if df.empty:
-            st.warning("No data available.")
-        else:
-            ts_data = df.groupby('date').agg({'revenue': 'sum'}).reset_index()
-            ts_data.rename(columns={'date': 'ds', 'revenue': 'y'}, inplace=True)
-            model = Prophet()
-            model.fit(ts_data)
-            future = model.make_future_dataframe(periods=30)
-            forecast = model.predict(future)
+    if prediction_option == "Sales Forecast (Time Series)":
+        st.markdown("""
+        ### 📈 Sales Forecast (Time Series)
+        This module analyzes historical sales data to forecast future sales trends using models like ARIMA or Prophet.
+        Useful for inventory planning and demand estimation.
+        """)
+        st.info("🚧 Forecast logic will be implemented here...")
 
-            st.plotly_chart(plot_plotly(model, forecast), use_container_width=True)
-            st.write(model.plot_components(forecast))
+    elif prediction_option == "Revenue Prediction Model":
+        st.markdown("""
+        ### 💰 Revenue Prediction Model
+        Predict revenue using regression models based on product, region, and historical performance.
+        This helps in budgeting and sales target setting.
+        """)
+        st.info("🚧 Revenue prediction logic goes here...")
 
-    elif pred_option == "Revenue Prediction Model":
-        st.markdown("🚧 Will implement regression model soon...")
+    elif prediction_option == "Seasonality Analysis":
+        st.markdown("""
+        ### 📅 Seasonality Analysis
+        Identify patterns such as monthly or weekly seasonality in sales to improve marketing and stock planning.
+        """)
+        st.info("🚧 Seasonality charts to be added...")
 
-    elif pred_option == "Seasonality Analysis":
-        st.markdown("🚧 Will add seasonal decomposition and analysis...")
-
-# ---------- Admin Panel ----------
-elif choice == "Admin Panel":
+elif choice == "Admin Panel" and st.session_state.username == "admin":
     st.subheader("🛠️ Admin Panel")
-    if st.session_state.user != "admin":
-        st.warning("⛔ Access Denied. Only Admin allowed.")
-    else:
-        st.markdown("### 👥 Registered Users")
-        users_df = pd.read_sql("SELECT username FROM users", user_engine)
-        st.write(users_df)
-        st.success(f"Total Users: {len(users_df)}")
+    users_df = pd.read_sql("SELECT username FROM users", user_engine)
+    feedback_df = pd.read_sql("SELECT * FROM feedback", user_engine)
 
-        st.markdown("### 🗣️ All Feedback")
-        fb_df = pd.read_sql("SELECT * FROM feedback", user_engine)
-        if fb_df.empty:
-            st.info("No feedback yet.")
-        else:
-            st.dataframe(fb_df)
-            st.metric("Average Rating", f"{fb_df['rating'].mean():.2f} ⭐")
-            st.bar_chart(fb_df['rating'].value_counts().sort_index())
+    st.markdown("### 👥 Registered Users")
+    st.write(f"Total Users: {len(users_df)}")
+    st.dataframe(users_df)
+
+    st.markdown("### 💬 Submitted Feedback")
+    if feedback_df.empty:
+        st.info("No feedback yet.")
+    else:
+        st.dataframe(feedback_df)
+        avg_rating = feedback_df['rating'].mean()
+        st.metric("📊 Average Rating", f"{avg_rating:.2f} ⭐")
+        st.bar_chart(feedback_df['rating'].value_counts().sort_index())
+
+elif choice == "Admin Panel":
+    st.warning("⚠ Only admin can access this panel.")
