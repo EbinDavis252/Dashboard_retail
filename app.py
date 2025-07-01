@@ -152,7 +152,7 @@ if st.sidebar.button("🚪 Logout"):
     st.rerun()
 
 # -------------------- MAIN MENU --------------------
-menu = ["Upload Data", "View Data", "Dashboard", "Feedback"]
+menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Admin Panel"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
 # -------------------- UPLOAD --------------------
@@ -257,49 +257,33 @@ elif choice == "Feedback":
     st.subheader("⭐ Rate Your Experience")
     st.markdown("We’d love to hear how your experience was using the app!")
 
-    # Simulated star rating with emojis
-    st.markdown("### Select Star Rating:")
-
     if 'star_rating' not in st.session_state:
         st.session_state.star_rating = 0
 
-    cols = st.columns(5)
+    st.markdown("### Select Star Rating:")
+    stars = st.columns(5)
     for i in range(5):
-        if cols[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
+        if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
             st.session_state.star_rating = i + 1
 
     st.markdown(f"**Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}**")
-
-    # Optional comment
     comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
 
     if st.button("Submit Feedback"):
         if st.session_state.star_rating == 0:
             st.warning("⚠ Please select a star rating before submitting.")
         else:
-            with feedback_engine.connect() as conn:
-                conn.execute(
-                    text("""
-                        INSERT INTO feedback (username, message) 
-                        VALUES (:u, :m)
-                    """),
-                    {
-                        "u": st.session_state.user,
-                        "m": f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() if comment else 'No comment'}"
-                    }
-                )
-                conn.commit()
+            save_feedback(st.session_state.user, f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}")
             st.success("✅ Thanks for your feedback!")
             st.session_state.star_rating = 0
+
+# -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
     st.subheader("🛠️ Admin Panel - Feedback Review")
-
-    # Optional: restrict this panel to specific users
     if st.session_state.user != "admin":
         st.warning("⛔ You are not authorized to view this page.")
     else:
         feedback_df = pd.read_sql("SELECT * FROM feedback ORDER BY submitted_at DESC", feedback_engine)
-
         if feedback_df.empty:
             st.info("No feedback submitted yet.")
         else:
