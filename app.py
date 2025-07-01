@@ -31,12 +31,13 @@ engine = sqlalchemy.create_engine('sqlite:///sales.db')
 user_engine = sqlalchemy.create_engine('sqlite:///users.db')
 feedback_engine = sqlalchemy.create_engine('sqlite:///feedback.db')
 
-# ✅ Create users table
+# ✅ Create users table with role
 with user_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
-            password TEXT NOT NULL
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'user'
         )
     """))
     conn.commit()
@@ -64,10 +65,11 @@ def register_user(username, password):
     df = pd.read_sql("SELECT * FROM users WHERE username = ?", user_engine, params=(username,))
     if not df.empty:
         return False
+    role = "admin" if username.lower() == "admin" else "user"
     with user_engine.connect() as conn:
         conn.execute(
-            text("INSERT INTO users (username, password) VALUES (:u, :p)"),
-            {"u": username, "p": hash_password(password)}
+            text("INSERT INTO users (username, password, role) VALUES (:u, :p, :r)"),
+            {"u": username, "p": hash_password(password), "r": role}
         )
         conn.commit()
     return True
@@ -116,6 +118,8 @@ if 'auth' not in st.session_state:
     st.session_state.auth = False
 if 'user' not in st.session_state:
     st.session_state.user = ""
+if 'role' not in st.session_state:
+    st.session_state.role = "user"
 
 # -------------------- AUTH UI --------------------
 if not st.session_state.auth:
@@ -129,6 +133,8 @@ if not st.session_state.auth:
             if verify_user(username, password):
                 st.session_state.auth = True
                 st.session_state.user = username
+                user_info = pd.read_sql("SELECT role FROM users WHERE username = ?", user_engine, params=(username,))
+                st.session_state.role = user_info['role'][0] if not user_info.empty else "user"
                 st.success("✅ Login successful!")
                 st.rerun()
             else:
@@ -144,27 +150,24 @@ if not st.session_state.auth:
                 st.error("❌ Username already exists.")
     st.stop()
 
-# -------------------- APP HEADER & LOGOUT --------------------
-st.sidebar.markdown(f"👋 Welcome, **{st.session_state.user}**!")
+# -------------------- HEADER & LOGOUT --------------------
+st.sidebar.markdown(f"👋 Welcome, **{st.session_state.user}** ({st.session_state.role})")
 if st.sidebar.button("🚪 Logout"):
     st.session_state.auth = False
     st.session_state.user = ""
+    st.session_state.role = "user"
     st.rerun()
 
 # -------------------- MAIN MENU --------------------
-menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Admin Panel"]
+menu = ["Upload Data", "View Data", "Dashboard", "Feedback"]
+if st.session_state.role == "admin":
+    menu.append("Admin Panel")
+
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
-# -------------------- UPLOAD --------------------
+# -------------------- PAGES --------------------
 if choice == "Upload Data":
     st.subheader("📤 Upload Sales CSV File")
-    with st.expander("📌 CSV Format Example"):
-        st.markdown("""
-        | date       | product     | region  | units_sold | revenue |
-        |------------|-------------|---------|------------|---------|
-        | 2024-06-01 | Widget A    | East    | 10         | 100     |
-        """)
-
     file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
         try:
@@ -175,12 +178,10 @@ if choice == "Upload Data":
                     st.success("Saved to database!")
         except Exception as e:
             st.error(f"❌ Error: {e}")
-
     if st.button("🔄 Clear All Data"):
         clear_db()
         st.success("Sales database cleared.")
 
-# -------------------- VIEW --------------------
 elif choice == "View Data":
     st.subheader("📑 View Stored Sales Data")
     data = load_data()
@@ -190,7 +191,6 @@ elif choice == "View Data":
         st.dataframe(data)
         st.download_button("📥 Download All Data", data=convert_df(data), file_name='sales_data.csv', mime='text/csv')
 
-# -------------------- DASHBOARD --------------------
 elif choice == "Dashboard":
     st.subheader("📊 Sales Dashboard")
     data = load_data()
@@ -210,53 +210,37 @@ elif choice == "Dashboard":
             end_date = st.date_input("📅 End Date", data['date'].max())
 
         data = data[(data['date'] >= pd.to_datetime(start_date)) & (data['date'] <= pd.to_datetime(end_date))]
-
         if region != "All":
             data = data[data['region'] == region]
         if product != "All":
             data = data[data['product'] == product]
 
-        st.markdown("### 📈 Key Performance Indicators")
+        st.markdown("### 📈 KPIs")
         c1, c2 = st.columns(2)
         c1.metric("Total Revenue", f"${data['revenue'].sum():,.2f}")
         c2.metric("Units Sold", f"{data['units_sold'].sum():,.0f}")
 
         st.markdown("### 📅 Revenue Over Time")
-        daily = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
-        st.plotly_chart(px.line(daily, x='date', y='revenue', markers=True), use_container_width=True)
+        st.plotly_chart(px.line(data.groupby('date')['revenue'].sum().reset_index(), x='date', y='revenue'))
 
         st.markdown("### 📦 Top Selling Products")
-        top_products = data.groupby('product')['revenue'].sum().sort_values(ascending=False).reset_index()
-        st.plotly_chart(px.bar(top_products, x='product', y='revenue', text_auto=True), use_container_width=True)
+        st.plotly_chart(px.bar(data.groupby('product')['revenue'].sum().reset_index().sort_values(by="revenue", ascending=False), x='product', y='revenue'))
 
         st.markdown("### 🌍 Region vs Product Heatmap")
-        pivot = data.pivot_table(values='revenue', index='region', columns='product', aggfunc='sum', fill_value=0)
         fig, ax = plt.subplots()
-        sns.heatmap(pivot, annot=True, fmt=".0f", cmap="YlGnBu", ax=ax)
+        sns.heatmap(data.pivot_table(index='region', columns='product', values='revenue', aggfunc='sum', fill_value=0), annot=True, fmt=".0f", cmap="YlGnBu", ax=ax)
         st.pyplot(fig)
 
         st.markdown("### 🗓️ Monthly Trend")
         data['month'] = data['date'].dt.to_period('M')
-        monthly = data.groupby('month')[['revenue', 'units_sold']].sum().reset_index()
-        st.bar_chart(monthly.set_index('month'))
+        st.bar_chart(data.groupby('month')[['revenue', 'units_sold']].sum())
 
         st.markdown("### 📤 Download Filtered Data")
         st.download_button("Download CSV", data=convert_df(data), file_name="filtered_sales.csv", mime='text/csv')
 
-        st.markdown("### 📌 Dynamic Chart")
-        colx1, colx2 = st.columns(2)
-        xcol = colx1.selectbox("X-axis", options=data.select_dtypes(include=['object', 'datetime64']).columns)
-        ycol = colx2.selectbox("Y-axis", options=data.select_dtypes(include='number').columns)
-        st.plotly_chart(px.bar(data, x=xcol, y=ycol), use_container_width=True)
-
-        st.markdown("### 🔬 Correlation Matrix")
-        st.dataframe(data.corr(numeric_only=True).round(2))
-
-# -------------------- FEEDBACK --------------------
 elif choice == "Feedback":
     st.subheader("⭐ Rate Your Experience")
     st.markdown("We’d love to hear how your experience was using the app!")
-
     if 'star_rating' not in st.session_state:
         st.session_state.star_rating = 0
 
@@ -277,10 +261,9 @@ elif choice == "Feedback":
             st.success("✅ Thanks for your feedback!")
             st.session_state.star_rating = 0
 
-# -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
     st.subheader("🛠️ Admin Panel - Feedback Review")
-    if st.session_state.user != "admin":
+    if st.session_state.role != "admin":
         st.warning("⛔ You are not authorized to view this page.")
     else:
         feedback_df = pd.read_sql("SELECT * FROM feedback ORDER BY submitted_at DESC", feedback_engine)
