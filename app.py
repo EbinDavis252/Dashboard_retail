@@ -1,12 +1,13 @@
 import streamlit as st
 import pandas as pd
 import sqlalchemy
+from sqlalchemy import text  # ✅ Required for raw SQL
 from sqlalchemy.orm import sessionmaker
 import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
-from datetime import datetime
 import hashlib
+from datetime import datetime
 
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="Retail Sales Dashboard", layout="wide")
@@ -29,20 +30,19 @@ st.markdown("""
 
 # -------------------- DATABASE SETUP --------------------
 engine = sqlalchemy.create_engine('sqlite:///sales.db')
-Session = sessionmaker(bind=engine)
-session = Session()
-
 user_engine = sqlalchemy.create_engine('sqlite:///users.db')
-user_conn = user_engine.connect()
-user_conn.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        username TEXT PRIMARY KEY,
-        password TEXT NOT NULL
-    )
-""")
-user_conn.close()
 
-# -------------------- UTILITY FUNCTIONS --------------------
+# ✅ Create users table (corrected)
+with user_engine.connect() as conn:
+    conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL
+        )
+    """))
+    conn.commit()
+
+# -------------------- AUTH FUNCTIONS --------------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -54,9 +54,11 @@ def register_user(username, password):
     df = pd.read_sql("SELECT * FROM users WHERE username = ?", user_engine, params=(username,))
     if not df.empty:
         return False
-    user_engine.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hash_password(password)))
+    user_engine.execute(text("INSERT INTO users (username, password) VALUES (:u, :p)"),
+                        {"u": username, "p": hash_password(password)})
     return True
 
+# -------------------- SALES FUNCTIONS --------------------
 def save_to_db(df):
     try:
         df.columns = df.columns.str.strip().str.lower()
@@ -80,13 +82,13 @@ def load_data():
 
 def clear_db():
     with engine.connect() as conn:
-        conn.execute("DELETE FROM sales")
+        conn.execute(text("DELETE FROM sales"))
 
 @st.cache_data
 def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
 
-# -------------------- AUTH --------------------
+# -------------------- AUTH UI --------------------
 if 'auth' not in st.session_state:
     st.session_state.auth = False
 
