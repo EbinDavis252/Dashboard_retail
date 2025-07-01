@@ -323,88 +323,94 @@ elif choice == "Predictions":
         "Seasonality Analysis"
     ])
 
+    # -------------------- Sales Forecast --------------------
     if prediction_option == "Sales Forecast (Time Series)":
-        st.markdown("""
-        ### 📈 Sales Forecast (Time Series)
-        This uses historical sales data to forecast future sales using time series models (like ARIMA or Prophet).
-        """)
+        st.markdown("### 📈 Sales Forecast (Time Series)")
+        st.markdown("This uses historical sales data to forecast future revenue using models like Prophet.")
+
         data = load_data()
         if data.empty:
             st.warning("⚠ Not enough data to forecast.")
         else:
+            from prophet import Prophet
+            from prophet.plot import plot_components_plotly
+
             df = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
             df = df.rename(columns={"date": "ds", "revenue": "y"})
 
-            from prophet import Prophet
             model = Prophet()
             model.fit(df)
 
             future = model.make_future_dataframe(periods=30)
             forecast = model.predict(future)
 
-            st.markdown("### 📉 Forecasted Revenue")
-            st.plotly_chart(px.line(forecast, x='ds', y='yhat'), use_container_width=True)
+            st.markdown("#### 🔮 Forecasted Revenue (Next 30 Days)")
+            st.plotly_chart(px.line(forecast, x='ds', y='yhat', labels={'ds': 'Date', 'yhat': 'Predicted Revenue'}), use_container_width=True)
 
+            st.markdown("#### 📉 Forecast Components")
+            st.plotly_chart(plot_components_plotly(model, forecast), use_container_width=True)
+
+    # -------------------- Revenue Prediction --------------------
     elif prediction_option == "Revenue Prediction Model":
-    st.markdown("### 💰 Revenue Prediction Model")
-    data = load_data()
-    if data.empty:
-        st.warning("⚠ Not enough data to train a prediction model.")
-    else:
-        from sklearn.linear_model import LinearRegression
-        from sklearn.preprocessing import OneHotEncoder
-        from sklearn.compose import ColumnTransformer
-        from sklearn.pipeline import make_pipeline
+        st.markdown("### 💰 Revenue Prediction Model")
 
-        df = data[['product', 'region', 'units_sold', 'revenue']].dropna()
+        data = load_data()
+        if data.empty:
+            st.warning("⚠ Not enough data to train a prediction model.")
+        else:
+            from sklearn.linear_model import LinearRegression
+            from sklearn.preprocessing import OneHotEncoder
+            from sklearn.compose import ColumnTransformer
+            from sklearn.pipeline import make_pipeline
 
-        # Define features and target
-        X = df[['product', 'region', 'units_sold']]
-        y = df['revenue']
+            df = data[['product', 'region', 'units_sold', 'revenue']].dropna()
 
-        # Preprocessing + model pipeline
-        preprocessor = ColumnTransformer([
-            ('cat', OneHotEncoder(handle_unknown='ignore'), ['product', 'region'])
-        ], remainder='passthrough')
+            X = df[['product', 'region', 'units_sold']]
+            y = df['revenue']
 
-        model = make_pipeline(preprocessor, LinearRegression())
-        model.fit(X, y)
+            preprocessor = ColumnTransformer([
+                ('cat', OneHotEncoder(handle_unknown='ignore'), ['product', 'region'])
+            ], remainder='passthrough')
 
-        # User input
-        st.markdown("#### 🎯 Predict Revenue")
-        selected_product = st.selectbox("Select Product", sorted(df['product'].unique()))
-        selected_region = st.selectbox("Select Region", sorted(df['region'].unique()))
-        units_input = st.number_input("Units Sold", min_value=1, value=10)
+            model = make_pipeline(preprocessor, LinearRegression())
+            model.fit(X, y)
 
-        input_df = pd.DataFrame([{
-            'product': selected_product,
-            'region': selected_region,
-            'units_sold': units_input
-        }])
+            st.markdown("#### 🎯 Predict Revenue for New Entry")
+            selected_product = st.selectbox("Select Product", sorted(df['product'].unique()))
+            selected_region = st.selectbox("Select Region", sorted(df['region'].unique()))
+            units_input = st.number_input("Units Sold", min_value=1, value=10)
 
-        predicted_revenue = model.predict(input_df)[0]
-        st.success(f"📈 Predicted Revenue: **${predicted_revenue:.2f}**")
+            input_df = pd.DataFrame([{
+                'product': selected_product,
+                'region': selected_region,
+                'units_sold': units_input
+            }])
 
+            predicted_revenue = model.predict(input_df)[0]
+            st.success(f"📈 Predicted Revenue: **${predicted_revenue:.2f}**")
 
+    # -------------------- Seasonality Analysis --------------------
     elif prediction_option == "Seasonality Analysis":
-    st.markdown("### 📆 Seasonality Analysis")
-    data = load_data()
-    if data.empty:
-        st.warning("⚠ No data available for seasonality analysis.")
-    else:
-        data['month'] = data['date'].dt.strftime('%B')
-        data['weekday'] = data['date'].dt.strftime('%A')
+        st.markdown("### 📆 Seasonality Analysis")
 
-        st.markdown("#### 📊 Average Revenue by Month")
-        monthly_avg = data.groupby('month')['revenue'].mean().reindex([
-            'January', 'February', 'March', 'April', 'May', 'June',
-            'July', 'August', 'September', 'October', 'November', 'December'
-        ])
-        st.bar_chart(monthly_avg)
+        data = load_data()
+        if data.empty:
+            st.warning("⚠ No data available for seasonality analysis.")
+        else:
+            data['month'] = data['date'].dt.strftime('%B')
+            data['weekday'] = data['date'].dt.strftime('%A')
 
-        st.markdown("#### 📅 Average Revenue by Weekday")
-        weekday_avg = data.groupby('weekday')['revenue'].mean().reindex([
-            'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
-        ])
-        st.bar_chart(weekday_avg)
+            st.markdown("#### 📊 Average Revenue by Month")
+            monthly_avg = data.groupby('month')['revenue'].mean().reindex([
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ])
+            st.bar_chart(monthly_avg)
+
+            st.markdown("#### 📅 Average Revenue by Weekday")
+            weekday_avg = data.groupby('weekday')['revenue'].mean().reindex([
+                'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
+            ])
+            st.bar_chart(weekday_avg)
+
 
