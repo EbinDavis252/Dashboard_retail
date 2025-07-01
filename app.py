@@ -31,7 +31,6 @@ engine = sqlalchemy.create_engine('sqlite:///sales.db')
 user_engine = sqlalchemy.create_engine('sqlite:///users.db')
 feedback_engine = sqlalchemy.create_engine('sqlite:///feedback.db')
 
-# Create users table
 with user_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
@@ -41,7 +40,6 @@ with user_engine.connect() as conn:
     """))
     conn.commit()
 
-# Create feedback table
 with feedback_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS feedback (
@@ -52,7 +50,7 @@ with feedback_engine.connect() as conn:
     """))
     conn.commit()
 
-# -------------------- AUTH HELPERS --------------------
+# -------------------- HELPERS --------------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -80,7 +78,6 @@ def save_feedback(username, message):
         )
         conn.commit()
 
-# -------------------- SALES HELPERS --------------------
 def save_to_db(df):
     try:
         df.columns = df.columns.str.strip().str.lower()
@@ -111,13 +108,13 @@ def clear_db():
 def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
 
-# -------------------- SESSION SETUP --------------------
+# -------------------- SESSION INIT --------------------
 if 'auth' not in st.session_state:
     st.session_state.auth = False
 if 'user' not in st.session_state:
     st.session_state.user = ""
 
-# -------------------- AUTH UI --------------------
+# -------------------- AUTH --------------------
 if not st.session_state.auth:
     st.sidebar.title("👤 User Login")
     tab1, tab2 = st.sidebar.tabs(["Login", "Register"])
@@ -144,14 +141,14 @@ if not st.session_state.auth:
                 st.error("❌ Username already exists.")
     st.stop()
 
-# -------------------- APP HEADER & LOGOUT --------------------
+# -------------------- UI HEADER --------------------
 st.sidebar.markdown(f"👋 Welcome, **{st.session_state.user}**!")
 if st.sidebar.button("🚪 Logout"):
     st.session_state.auth = False
     st.session_state.user = ""
     st.rerun()
 
-# -------------------- MAIN MENU --------------------
+# -------------------- MAIN NAVIGATION --------------------
 menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Admin Panel"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
@@ -168,7 +165,7 @@ if choice == "Upload Data":
     file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
         try:
-            df = pd.read_csv(file, encoding='latin1')
+            df = pd.read_csv(file)
             st.dataframe(df)
             if st.button("✅ Save to Database"):
                 if save_to_db(df):
@@ -216,47 +213,27 @@ elif choice == "Dashboard":
         if product != "All":
             data = data[data['product'] == product]
 
-        st.markdown("### 📈 Key Performance Indicators")
-        c1, c2 = st.columns(2)
-        c1.metric("Total Revenue", f"${data['revenue'].sum():,.2f}")
-        c2.metric("Units Sold", f"{data['units_sold'].sum():,.0f}")
+        st.metric("Total Revenue", f"${data['revenue'].sum():,.2f}")
+        st.metric("Units Sold", f"{data['units_sold'].sum():,.0f}")
 
-        st.markdown("### 📅 Revenue Over Time")
-        daily = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
+        daily = data.groupby('date')['revenue'].sum().reset_index()
         st.plotly_chart(px.line(daily, x='date', y='revenue', markers=True), use_container_width=True)
 
-        st.markdown("### 📦 Top Selling Products")
         top_products = data.groupby('product')['revenue'].sum().sort_values(ascending=False).reset_index()
-        st.plotly_chart(px.bar(top_products, x='product', y='revenue', text_auto=True), use_container_width=True)
+        st.plotly_chart(px.bar(top_products, x='product', y='revenue'), use_container_width=True)
 
-        st.markdown("### 🌍 Region vs Product Heatmap")
         pivot = data.pivot_table(values='revenue', index='region', columns='product', aggfunc='sum', fill_value=0)
         fig, ax = plt.subplots()
         sns.heatmap(pivot, annot=True, fmt=".0f", cmap="YlGnBu", ax=ax)
         st.pyplot(fig)
 
-        st.markdown("### 🗓️ Monthly Trend")
         data['month'] = data['date'].dt.to_period('M')
         monthly = data.groupby('month')[['revenue', 'units_sold']].sum().reset_index()
         st.bar_chart(monthly.set_index('month'))
 
-        st.markdown("### 📤 Download Filtered Data")
-        st.download_button("Download CSV", data=convert_df(data), file_name="filtered_sales.csv", mime='text/csv')
-
-        st.markdown("### 📌 Dynamic Chart")
-        colx1, colx2 = st.columns(2)
-        xcol = colx1.selectbox("X-axis", options=data.select_dtypes(include=['object', 'datetime64']).columns)
-        ycol = colx2.selectbox("Y-axis", options=data.select_dtypes(include='number').columns)
-        st.plotly_chart(px.bar(data, x=xcol, y=ycol), use_container_width=True)
-
-        st.markdown("### 🔬 Correlation Matrix")
-        st.dataframe(data.corr(numeric_only=True).round(2))
-
 # -------------------- FEEDBACK --------------------
 elif choice == "Feedback":
     st.subheader("⭐ Rate Your Experience")
-    st.markdown("We’d love to hear how your experience was using the app!")
-
     if 'star_rating' not in st.session_state:
         st.session_state.star_rating = 0
 
@@ -273,25 +250,45 @@ elif choice == "Feedback":
         if st.session_state.star_rating == 0:
             st.warning("⚠ Please select a star rating before submitting.")
         else:
-            save_feedback(st.session_state.user, f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}")
+            save_feedback(
+                st.session_state.user,
+                f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}"
+            )
             st.success("✅ Thanks for your feedback!")
             st.session_state.star_rating = 0
 
 # -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
-    st.subheader("🛠️ Admin Panel - Feedback & Users")
+    st.subheader("🛠️ Admin Panel")
 
     if st.session_state.user != "admin":
         st.warning("⛔ You are not authorized to view this page.")
     else:
-        st.markdown("### 🗣️ User Feedback")
+        # Feedback Table
+        st.markdown("### 🗣️ All Feedback")
         feedback_df = pd.read_sql("SELECT * FROM feedback ORDER BY submitted_at DESC", feedback_engine)
         if feedback_df.empty:
             st.info("No feedback submitted yet.")
         else:
-            st.dataframe(feedback_df, use_container_width=True)
+            st.dataframe(feedback_df)
 
+            # Feedback Analytics
+            st.markdown("### 📊 Feedback Analytics")
+            feedback_df['rating'] = feedback_df['message'].str.extract(r'Rating: (\\d)').astype(float)
+            avg_rating = feedback_df['rating'].mean()
+            st.metric("Average Rating", f"{avg_rating:.2f} ⭐")
+
+            rating_counts = feedback_df['rating'].value_counts().sort_index()
+            chart = pd.DataFrame({ "Rating": rating_counts.index, "Count": rating_counts.values })
+            st.bar_chart(chart.set_index("Rating"))
+
+            with st.expander("💬 View Sample Comments"):
+                comments = feedback_df[['username', 'message', 'submitted_at']].copy()
+                comments['Comment'] = comments['message'].str.extract(r'Comment: (.*)')
+                st.dataframe(comments[['username', 'submitted_at', 'Comment']])
+
+        # Users Table
         st.markdown("### 👥 Registered Users")
         users_df = pd.read_sql("SELECT username FROM users", user_engine)
         st.success(f"**Total Users Registered:** {users_df.shape[0]}")
-        st.dataframe(users_df, use_container_width=True)
+        st.dataframe(users_df)
