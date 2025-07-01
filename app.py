@@ -291,3 +291,16 @@ elif choice == "Feedback":
                 conn.commit()
             st.success("✅ Thanks for your feedback!")
             st.session_state.star_rating = 0
+elif choice == "Admin Panel":
+    st.subheader("🛠️ Admin Panel - Feedback Review")
+
+    # Optional: restrict this panel to specific users
+    if st.session_state.user != "admin":
+        st.warning("⛔ You are not authorized to view this page.")
+    else:
+        feedback_df = pd.read_sql("SELECT * FROM feedback ORDER BY submitted_at DESC", feedback_engine)
+
+        if feedback_df.empty:
+            st.info("No feedback submitted yet.")
+        else:
+            st.dataframe(feedback_df, use_container_width=True)
