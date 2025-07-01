@@ -329,7 +329,7 @@ elif choice == "Predictions":
         This uses historical sales data to forecast future sales using time series models (like ARIMA or Prophet).
         Ideal for inventory planning and demand forecasting.
         """)
-        data = load_data()
+data = load_data()
 
 if data.empty:
     st.warning("⚠ Not enough data to forecast.")
@@ -350,6 +350,7 @@ else:
     st.markdown("### 📉 Forecast Components")
     from prophet.plot import plot_components_plotly
     st.plotly_chart(plot_components_plotly(model, forecast), use_container_width=True)
+
 
     elif prediction_option == "Revenue Prediction Model":
         st.markdown("""
