@@ -31,7 +31,7 @@ engine = sqlalchemy.create_engine('sqlite:///sales.db')
 user_engine = sqlalchemy.create_engine('sqlite:///users.db')
 feedback_engine = sqlalchemy.create_engine('sqlite:///feedback.db')
 
-# ✅ Create users table
+# Create users table
 with user_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
@@ -41,7 +41,7 @@ with user_engine.connect() as conn:
     """))
     conn.commit()
 
-# ✅ Create feedback table
+# Create feedback table
 with feedback_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS feedback (
@@ -279,12 +279,19 @@ elif choice == "Feedback":
 
 # -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
-    st.subheader("🛠️ Admin Panel - Feedback Review")
+    st.subheader("🛠️ Admin Panel - Feedback & Users")
+
     if st.session_state.user != "admin":
         st.warning("⛔ You are not authorized to view this page.")
     else:
+        st.markdown("### 🗣️ User Feedback")
         feedback_df = pd.read_sql("SELECT * FROM feedback ORDER BY submitted_at DESC", feedback_engine)
         if feedback_df.empty:
             st.info("No feedback submitted yet.")
         else:
             st.dataframe(feedback_df, use_container_width=True)
+
+        st.markdown("### 👥 Registered Users")
+        users_df = pd.read_sql("SELECT username FROM users", user_engine)
+        st.success(f"**Total Users Registered:** {users_df.shape[0]}")
+        st.dataframe(users_df, use_container_width=True)
