@@ -31,6 +31,7 @@ engine = sqlalchemy.create_engine('sqlite:///sales.db')
 user_engine = sqlalchemy.create_engine('sqlite:///users.db')
 feedback_engine = sqlalchemy.create_engine('sqlite:///feedback.db')
 
+# Create users table
 with user_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
@@ -40,6 +41,7 @@ with user_engine.connect() as conn:
     """))
     conn.commit()
 
+# Create feedback table
 with feedback_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS feedback (
@@ -50,7 +52,7 @@ with feedback_engine.connect() as conn:
     """))
     conn.commit()
 
-# -------------------- HELPERS --------------------
+# -------------------- AUTH HELPERS --------------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -78,6 +80,7 @@ def save_feedback(username, message):
         )
         conn.commit()
 
+# -------------------- SALES HELPERS --------------------
 def save_to_db(df):
     try:
         df.columns = df.columns.str.strip().str.lower()
@@ -108,13 +111,13 @@ def clear_db():
 def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
 
-# -------------------- SESSION INIT --------------------
+# -------------------- SESSION SETUP --------------------
 if 'auth' not in st.session_state:
     st.session_state.auth = False
 if 'user' not in st.session_state:
     st.session_state.user = ""
 
-# -------------------- AUTH --------------------
+# -------------------- AUTH UI --------------------
 if not st.session_state.auth:
     st.sidebar.title("👤 User Login")
     tab1, tab2 = st.sidebar.tabs(["Login", "Register"])
@@ -141,24 +144,31 @@ if not st.session_state.auth:
                 st.error("❌ Username already exists.")
     st.stop()
 
-# -------------------- UI HEADER --------------------
+# -------------------- APP HEADER & LOGOUT --------------------
 st.sidebar.markdown(f"👋 Welcome, **{st.session_state.user}**!")
 if st.sidebar.button("🚪 Logout"):
     st.session_state.auth = False
     st.session_state.user = ""
     st.rerun()
 
-# -------------------- MAIN NAVIGATION --------------------
+# -------------------- MAIN MENU --------------------
 menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Admin Panel"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
 # -------------------- UPLOAD --------------------
 if choice == "Upload Data":
     st.subheader("📤 Upload Sales CSV File")
+    with st.expander("📌 CSV Format Example"):
+        st.markdown("""
+        | date       | product     | region  | units_sold | revenue |
+        |------------|-------------|---------|------------|---------|
+        | 2024-06-01 | Widget A    | East    | 10         | 100     |
+        """)
+
     file = st.file_uploader("Upload CSV", type=["csv"])
     if file:
         try:
-            df = pd.read_csv(file)
+            df = pd.read_csv(file, encoding='latin1')
             st.dataframe(df)
             if st.button("✅ Save to Database"):
                 if save_to_db(df):
@@ -206,23 +216,41 @@ elif choice == "Dashboard":
         if product != "All":
             data = data[data['product'] == product]
 
-        st.metric("Total Revenue", f"${data['revenue'].sum():,.2f}")
-        st.metric("Units Sold", f"{data['units_sold'].sum():,.0f}")
+        st.markdown("### 📈 Key Performance Indicators")
+        c1, c2 = st.columns(2)
+        c1.metric("Total Revenue", f"${data['revenue'].sum():,.2f}")
+        c2.metric("Units Sold", f"{data['units_sold'].sum():,.0f}")
 
-        daily = data.groupby('date')['revenue'].sum().reset_index()
+        st.markdown("### 📅 Revenue Over Time")
+        daily = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
         st.plotly_chart(px.line(daily, x='date', y='revenue', markers=True), use_container_width=True)
 
+        st.markdown("### 📦 Top Selling Products")
         top_products = data.groupby('product')['revenue'].sum().sort_values(ascending=False).reset_index()
-        st.plotly_chart(px.bar(top_products, x='product', y='revenue'), use_container_width=True)
+        st.plotly_chart(px.bar(top_products, x='product', y='revenue', text_auto=True), use_container_width=True)
 
+        st.markdown("### 🌍 Region vs Product Heatmap")
         pivot = data.pivot_table(values='revenue', index='region', columns='product', aggfunc='sum', fill_value=0)
         fig, ax = plt.subplots()
         sns.heatmap(pivot, annot=True, fmt=".0f", cmap="YlGnBu", ax=ax)
         st.pyplot(fig)
 
+        st.markdown("### 🗓️ Monthly Trend")
         data['month'] = data['date'].dt.to_period('M')
         monthly = data.groupby('month')[['revenue', 'units_sold']].sum().reset_index()
         st.bar_chart(monthly.set_index('month'))
+
+        st.markdown("### 📤 Download Filtered Data")
+        st.download_button("Download CSV", data=convert_df(data), file_name="filtered_sales.csv", mime='text/csv')
+
+        st.markdown("### 📌 Dynamic Chart")
+        colx1, colx2 = st.columns(2)
+        xcol = colx1.selectbox("X-axis", options=data.select_dtypes(include=['object', 'datetime64']).columns)
+        ycol = colx2.selectbox("Y-axis", options=data.select_dtypes(include='number').columns)
+        st.plotly_chart(px.bar(data, x=xcol, y=ycol), use_container_width=True)
+
+        st.markdown("### 🔬 Correlation Matrix")
+        st.dataframe(data.corr(numeric_only=True).round(2))
 
 # -------------------- FEEDBACK --------------------
 elif choice == "Feedback":
