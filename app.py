@@ -1,18 +1,17 @@
 import streamlit as st
 import pandas as pd
 import sqlalchemy
-from sqlalchemy import text  # ✅ Required for raw SQL
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
 import hashlib
-from datetime import datetime
 
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="Retail Sales Dashboard", layout="wide")
 
-# -------------------- BACKGROUND STYLING --------------------
+# -------------------- BACKGROUND --------------------
 st.markdown("""
     <style>
         .stApp {
@@ -28,11 +27,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# -------------------- DATABASE SETUP --------------------
+# -------------------- DATABASES --------------------
 engine = sqlalchemy.create_engine('sqlite:///sales.db')
 user_engine = sqlalchemy.create_engine('sqlite:///users.db')
 
-# ✅ Create users table (corrected)
+# ✅ Create users table if not exists
 with user_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
@@ -42,7 +41,7 @@ with user_engine.connect() as conn:
     """))
     conn.commit()
 
-# -------------------- AUTH FUNCTIONS --------------------
+# -------------------- AUTH HELPERS --------------------
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -54,11 +53,15 @@ def register_user(username, password):
     df = pd.read_sql("SELECT * FROM users WHERE username = ?", user_engine, params=(username,))
     if not df.empty:
         return False
-    user_engine.execute(text("INSERT INTO users (username, password) VALUES (:u, :p)"),
-                        {"u": username, "p": hash_password(password)})
+    with user_engine.connect() as conn:
+        conn.execute(
+            text("INSERT INTO users (username, password) VALUES (:u, :p)"),
+            {"u": username, "p": hash_password(password)}
+        )
+        conn.commit()
     return True
 
-# -------------------- SALES FUNCTIONS --------------------
+# -------------------- SALES HELPERS --------------------
 def save_to_db(df):
     try:
         df.columns = df.columns.str.strip().str.lower()
@@ -83,6 +86,7 @@ def load_data():
 def clear_db():
     with engine.connect() as conn:
         conn.execute(text("DELETE FROM sales"))
+        conn.commit()
 
 @st.cache_data
 def convert_df(df):
@@ -139,6 +143,7 @@ if choice == "Upload Data":
                     st.success("Saved to database!")
         except Exception as e:
             st.error(f"❌ Error: {e}")
+
     if st.button("🔄 Clear All Data"):
         clear_db()
         st.success("Sales database cleared.")
