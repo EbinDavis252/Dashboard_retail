@@ -6,6 +6,7 @@ import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
 import hashlib
+from prophet import Prophet
 
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="Retail Sales Dashboard", layout="wide")
@@ -328,7 +329,27 @@ elif choice == "Predictions":
         This uses historical sales data to forecast future sales using time series models (like ARIMA or Prophet).
         Ideal for inventory planning and demand forecasting.
         """)
-        st.info("🚧 Forecast logic is under development. Model training and prediction code can be added here.")
+        data = load_data()
+
+if data.empty:
+    st.warning("⚠ Not enough data to forecast.")
+else:
+    df = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
+    df = df.rename(columns={"date": "ds", "revenue": "y"})  # Prophet needs these column names
+
+    model = Prophet()
+    model.fit(df)
+
+    future = model.make_future_dataframe(periods=30)
+    forecast = model.predict(future)
+
+    st.markdown("### 📈 Forecasted Revenue (Next 30 Days)")
+    fig = px.line(forecast, x='ds', y='yhat', labels={"ds": "Date", "yhat": "Predicted Revenue"})
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("### 📉 Forecast Components")
+    from prophet.plot import plot_components_plotly
+    st.plotly_chart(plot_components_plotly(model, forecast), use_container_width=True)
 
     elif prediction_option == "Revenue Prediction Model":
         st.markdown("""
