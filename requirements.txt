@@ -4,3 +4,4 @@ sqlalchemy
 plotly
 seaborn
 matplotlib
+prophet
