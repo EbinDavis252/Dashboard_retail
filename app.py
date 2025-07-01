@@ -107,7 +107,7 @@ if not st.session_state.auth:
             if verify_user(username, password):
                 st.session_state.auth = True
                 st.success("✅ Login successful!")
-                st.experimental_rerun()  # 🔁 Force rerun to load main app
+                st.rerun()  # 🔁 Force rerun to load main app
             else:
                 st.error("❌ Invalid credentials.")
 
