@@ -254,12 +254,26 @@ elif choice == "Dashboard":
 
 # -------------------- FEEDBACK --------------------
 elif choice == "Feedback":
-    st.subheader("💬 Share Your Feedback")
-    st.markdown("We'd love to hear your thoughts or suggestions.")
-    feedback = st.text_area("Your message:", max_chars=500)
+    st.subheader("⭐ Rate Your Experience")
+    st.markdown("We’d love to hear how your experience was using the app!")
+
+    # Star rating (1 to 5)
+    rating = st.slider("Your rating (1 = worst, 5 = best)", min_value=1, max_value=5, value=3)
+
+    # Optional comment
+    comment = st.text_area("Any comments? (Optional)", max_chars=300)
+
     if st.button("Submit Feedback"):
-        if feedback.strip():
-            save_feedback(st.session_state.user, feedback)
-            st.success("✅ Thank you for your feedback!")
-        else:
-            st.warning("⚠ Please write something before submitting.")
+        with feedback_engine.connect() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO feedback (username, message) 
+                    VALUES (:u, :m)
+                """),
+                {
+                    "u": st.session_state.user,
+                    "m": f"Rating: {rating} stars | Comment: {comment.strip() if comment else 'No comment'}"
+                }
+            )
+            conn.commit()
+        st.success("✅ Thanks for your feedback!")
