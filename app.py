@@ -327,43 +327,28 @@ elif choice == "Predictions":
         st.markdown("""
         ### 📈 Sales Forecast (Time Series)
         This uses historical sales data to forecast future sales using time series models (like ARIMA or Prophet).
-        Ideal for inventory planning and demand forecasting.
         """)
-data = load_data()
+        data = load_data()
+        if data.empty:
+            st.warning("⚠ Not enough data to forecast.")
+        else:
+            df = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
+            df = df.rename(columns={"date": "ds", "revenue": "y"})
 
-if data.empty:
-    st.warning("⚠ Not enough data to forecast.")
-else:
-    df = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
-    df = df.rename(columns={"date": "ds", "revenue": "y"})  # Prophet needs these column names
+            from prophet import Prophet
+            model = Prophet()
+            model.fit(df)
 
-    model = Prophet()
-    model.fit(df)
+            future = model.make_future_dataframe(periods=30)
+            forecast = model.predict(future)
 
-    future = model.make_future_dataframe(periods=30)
-    forecast = model.predict(future)
-
-    st.markdown("### 📈 Forecasted Revenue (Next 30 Days)")
-    fig = px.line(forecast, x='ds', y='yhat', labels={"ds": "Date", "yhat": "Predicted Revenue"})
-    st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("### 📉 Forecast Components")
-    from prophet.plot import plot_components_plotly
-    st.plotly_chart(plot_components_plotly(model, forecast), use_container_width=True)
+            st.markdown("### 📉 Forecasted Revenue")
+            st.plotly_chart(px.line(forecast, x='ds', y='yhat'), use_container_width=True)
 
     elif prediction_option == "Revenue Prediction Model":
-        st.markdown("""
-        ### 💰 Revenue Prediction Model
-        This model predicts revenue based on inputs like units sold, region, and product type.
-        Useful for setting revenue targets and monitoring deviations.
-        """)
-        st.info("🚧 Prediction logic will go here. You can use regression models to estimate future revenue.")
+        st.markdown("### 💰 Revenue Prediction Model")
+        st.info("🚧 Revenue prediction model is under development.")
 
     elif prediction_option == "Seasonality Analysis":
-        st.markdown("""
-        ### 📆 Seasonality Analysis
-        Identifies patterns and trends in sales that repeat over time (e.g., monthly, quarterly).
-        Helps optimize marketing and stocking strategies.
-        """)
-        st.info("🚧 Visual seasonality charts can be added using rolling means or decomposition plots.")
-
+        st.markdown("### 📆 Seasonality Analysis")
+        st.info("🚧 Seasonality analysis logic is under development.")
