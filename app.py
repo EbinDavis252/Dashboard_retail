@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import sqlalchemy
 from sqlalchemy import text
-from sqlalchemy.orm import sessionmaker
 import plotly.express as px
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -30,13 +29,25 @@ st.markdown("""
 # -------------------- DATABASES --------------------
 engine = sqlalchemy.create_engine('sqlite:///sales.db')
 user_engine = sqlalchemy.create_engine('sqlite:///users.db')
+feedback_engine = sqlalchemy.create_engine('sqlite:///feedback.db')
 
-# ✅ Create users table if not exists
+# ✅ Create users table
 with user_engine.connect() as conn:
     conn.execute(text("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             password TEXT NOT NULL
+        )
+    """))
+    conn.commit()
+
+# ✅ Create feedback table
+with feedback_engine.connect() as conn:
+    conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS feedback (
+            username TEXT,
+            message TEXT,
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """))
     conn.commit()
@@ -60,6 +71,14 @@ def register_user(username, password):
         )
         conn.commit()
     return True
+
+def save_feedback(username, message):
+    with feedback_engine.connect() as conn:
+        conn.execute(
+            text("INSERT INTO feedback (username, message) VALUES (:u, :m)"),
+            {"u": username, "m": message}
+        )
+        conn.commit()
 
 # -------------------- SALES HELPERS --------------------
 def save_to_db(df):
@@ -92,10 +111,13 @@ def clear_db():
 def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
 
-# -------------------- AUTH UI --------------------
+# -------------------- SESSION SETUP --------------------
 if 'auth' not in st.session_state:
     st.session_state.auth = False
+if 'user' not in st.session_state:
+    st.session_state.user = ""
 
+# -------------------- AUTH UI --------------------
 if not st.session_state.auth:
     st.sidebar.title("👤 User Login")
     tab1, tab2 = st.sidebar.tabs(["Login", "Register"])
@@ -106,8 +128,9 @@ if not st.session_state.auth:
         if st.button("Login"):
             if verify_user(username, password):
                 st.session_state.auth = True
+                st.session_state.user = username
                 st.success("✅ Login successful!")
-                st.rerun()  # 🔁 Force rerun to load main app
+                st.rerun()
             else:
                 st.error("❌ Invalid credentials.")
 
@@ -121,10 +144,18 @@ if not st.session_state.auth:
                 st.error("❌ Username already exists.")
     st.stop()
 
+# -------------------- APP HEADER & LOGOUT --------------------
+st.sidebar.markdown(f"👋 Welcome, **{st.session_state.user}**!")
+if st.sidebar.button("🚪 Logout"):
+    st.session_state.auth = False
+    st.session_state.user = ""
+    st.rerun()
+
 # -------------------- MAIN MENU --------------------
-menu = ["Upload Data", "View Data", "Dashboard"]
+menu = ["Upload Data", "View Data", "Dashboard", "Feedback"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
+# -------------------- UPLOAD --------------------
 if choice == "Upload Data":
     st.subheader("📤 Upload Sales CSV File")
     with st.expander("📌 CSV Format Example"):
@@ -149,6 +180,7 @@ if choice == "Upload Data":
         clear_db()
         st.success("Sales database cleared.")
 
+# -------------------- VIEW --------------------
 elif choice == "View Data":
     st.subheader("📑 View Stored Sales Data")
     data = load_data()
@@ -158,6 +190,7 @@ elif choice == "View Data":
         st.dataframe(data)
         st.download_button("📥 Download All Data", data=convert_df(data), file_name='sales_data.csv', mime='text/csv')
 
+# -------------------- DASHBOARD --------------------
 elif choice == "Dashboard":
     st.subheader("📊 Sales Dashboard")
     data = load_data()
@@ -218,3 +251,15 @@ elif choice == "Dashboard":
 
         st.markdown("### 🔬 Correlation Matrix")
         st.dataframe(data.corr(numeric_only=True).round(2))
+
+# -------------------- FEEDBACK --------------------
+elif choice == "Feedback":
+    st.subheader("💬 Share Your Feedback")
+    st.markdown("We'd love to hear your thoughts or suggestions.")
+    feedback = st.text_area("Your message:", max_chars=500)
+    if st.button("Submit Feedback"):
+        if feedback.strip():
+            save_feedback(st.session_state.user, feedback)
+            st.success("✅ Thank you for your feedback!")
+        else:
+            st.warning("⚠ Please write something before submitting.")
