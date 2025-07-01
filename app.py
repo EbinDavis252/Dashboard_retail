@@ -102,7 +102,7 @@ if not st.session_state.auth:
                 st.session_state.auth = True
                 st.session_state.username = username
                 st.success("✅ Login successful!")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("❌ Invalid credentials.")
 
