@@ -103,13 +103,13 @@ if not st.session_state.auth:
     with tab1:
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
-       if st.button("Login"):
-           if verify_user(username, password):
-              st.session_state.auth = True
-              st.success("✅ Login successful!")
-              st.experimental_rerun()  # 🔁 rerun to load app content
-          else:
-              st.error("❌ Invalid credentials.")
+        if st.button("Login"):
+            if verify_user(username, password):
+                st.session_state.auth = True
+                st.success("✅ Login successful!")
+                st.experimental_rerun()  # 🔁 Force rerun to load main app
+            else:
+                st.error("❌ Invalid credentials.")
 
     with tab2:
         new_user = st.text_input("New Username")
