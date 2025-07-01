@@ -104,12 +104,12 @@ if not st.session_state.auth:
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
         if st.button("Login"):
-            if verify_user(username, password):
-                st.session_state.auth = True
-                st.success("✅ Login successful!")
-            else:
-                st.error("❌ Invalid credentials.")
-
+    if verify_user(username, password):
+        st.session_state.auth = True
+        st.success("✅ Login successful!")
+        st.experimental_rerun()  # 🔁 force rerun to load main content
+    else:
+        st.error("❌ Invalid credentials.")
     with tab2:
         new_user = st.text_input("New Username")
         new_pass = st.text_input("New Password", type="password")
