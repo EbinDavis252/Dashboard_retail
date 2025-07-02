@@ -144,6 +144,25 @@ if not st.session_state.auth:
             else:
                 st.error("❌ Username already exists.")
     st.stop()
+st.markdown("""
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .welcome-banner {
+            animation: fadeInUp 1s ease-out;
+        }
+    </style>
+    <div class="welcome-banner" style="text-align:center; padding: 2rem 1rem;
+                border-radius: 15px; background: linear-gradient(to right, #89f7fe, #66a6ff);
+                color: #ffffff; font-size: 2.5rem; font-weight: bold;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                box-shadow: 0 0 20px rgba(0,0,0,0.3);">
+        👋 Welcome to the <span style="color: #ffdf00;">Retail Sales Dashboard</span>!
+    </div>
+""", unsafe_allow_html=True)
+
 
 # -------------------- APP HEADER & LOGOUT --------------------
 st.sidebar.markdown(f"👋 Welcome, *{st.session_state.user}*!")
