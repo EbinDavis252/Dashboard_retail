@@ -415,10 +415,8 @@ elif choice == "Predictions":
             ])
             st.bar_chart(weekday_avg)
     elif choice == "Chatbot Assistant":
-    import openai
-
-    st.subheader("🤖 Smart Chatbot Assistant")
-    st.markdown("Ask me anything about your data, dashboard, or forecasts!")
+        st.subheader("🤖 Smart Chatbot Assistant")
+        st.markdown("Ask me anything about your data, dashboard, or forecasts!")
 
     if "chat_messages" not in st.session_state:
         st.session_state.chat_messages = [
