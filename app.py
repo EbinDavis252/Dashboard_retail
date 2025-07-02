@@ -414,5 +414,43 @@ elif choice == "Predictions":
                 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
             ])
             st.bar_chart(weekday_avg)
+    elif choice == "Chatbot Assistant":
+st.subheader("🤖 Smart Chatbot Assistant")
+st.markdown("Ask me anything about your data, dashboard, or forecasts!")
+
+# Initialize chat history
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = [
+        {"role": "system", "content": "You are a helpful assistant for a retail sales dashboard app."}
+    ]
+
+# Display past messages
+for msg in st.session_state.chat_messages[1:]:  # skip system prompt
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# Chat input
+user_prompt = st.chat_input("Ask me anything...")
+if user_prompt:
+    # Show user message
+    st.chat_message("user").markdown(user_prompt)
+    st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
+
+    # Get OpenAI assistant reply
+    try:
+        with st.spinner("Thinking..."):
+            response = openai.ChatCompletion.create(
+                model="gpt-4",  # or "gpt-3.5-turbo" if you want faster responses
+                messages=st.session_state.chat_messages,
+                temperature=0.7
+            )
+            assistant_reply = response.choices[0].message["content"]
+    except Exception as e:
+        assistant_reply = f"❌ Error: {str(e)}"
+
+    # Show assistant message
+    st.chat_message("assistant").markdown(assistant_reply)
+    st.session_state.chat_messages.append({"role": "assistant", "content": assistant_reply})
+
 
 
