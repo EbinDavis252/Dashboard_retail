@@ -31,6 +31,7 @@ st.markdown("""
 # -------------------- BACKGROUND --------------------
 st.markdown("""
     <style>
+        /* Background gradient for main app */
         .stApp {
             background: linear-gradient(to right, #c4fda1, #c2e9fb, #cfa1fd);
             animation: gradient 15s ease infinite;
@@ -45,24 +46,27 @@ st.markdown("""
         /* Sidebar background */
         section[data-testid="stSidebar"] {
             background: linear-gradient(to bottom, #1e3c72, #2a5298);
+        }
+
+        /* Sidebar title (e.g. "User Login") */
+        section[data-testid="stSidebar"] .css-1d391kg {
             color: white;
         }
 
-        /* Input fields in sidebar */
-        section[data-testid="stSidebar"] input {
-            background-color: black !important;
-            color: white !important;
-        }
-
-        /* Label text in sidebar */
+        /* Sidebar labels (e.g. "Username", "Password") */
         section[data-testid="stSidebar"] label {
             color: white !important;
         }
 
-        /* Button styling */
-        section[data-testid="stSidebar"] .stButton > button {
-            background-color: #f0b90b;
-            color: black;
+        /* Sidebar tab labels ("Login", "Register") */
+        section[data-testid="stSidebar"] .stTabs [data-baseweb="tab"] {
+            color: white;
+        }
+
+        /* Selected tab indicator (optional, for better UX) */
+        section[data-testid="stSidebar"] .stTabs [aria-selected="true"] {
+            font-weight: bold;
+            border-bottom: 2px solid #f0b90b;
         }
     </style>
 """, unsafe_allow_html=True)
