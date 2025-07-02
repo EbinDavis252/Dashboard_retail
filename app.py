@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 import hashlib
 from prophet import Prophet
 import openai
-openai.api_key = st.secrets["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"]
+
+openai.api_key = st.secrets["openai"]["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"]
 
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="Retail Sales Dashboard", layout="wide")
