@@ -415,42 +415,39 @@ elif choice == "Predictions":
             ])
             st.bar_chart(weekday_avg)
     elif choice == "Chatbot Assistant":
-st.subheader("🤖 Smart Chatbot Assistant")
-st.markdown("Ask me anything about your data, dashboard, or forecasts!")
+    import openai
 
-# Initialize chat history
-if "chat_messages" not in st.session_state:
-    st.session_state.chat_messages = [
-        {"role": "system", "content": "You are a helpful assistant for a retail sales dashboard app."}
-    ]
+    st.subheader("🤖 Smart Chatbot Assistant")
+    st.markdown("Ask me anything about your data, dashboard, or forecasts!")
 
-# Display past messages
-for msg in st.session_state.chat_messages[1:]:  # skip system prompt
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = [
+            {"role": "system", "content": "You are a helpful assistant for a retail sales dashboard app."}
+        ]
 
-# Chat input
-user_prompt = st.chat_input("Ask me anything...")
-if user_prompt:
-    # Show user message
-    st.chat_message("user").markdown(user_prompt)
-    st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
+    for msg in st.session_state.chat_messages[1:]:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-    # Get OpenAI assistant reply
-    try:
-        with st.spinner("Thinking..."):
-            response = openai.ChatCompletion.create(
-                model="gpt-4",  # or "gpt-3.5-turbo" if you want faster responses
-                messages=st.session_state.chat_messages,
-                temperature=0.7
-            )
-            assistant_reply = response.choices[0].message["content"]
-    except Exception as e:
-        assistant_reply = f"❌ Error: {str(e)}"
+    user_prompt = st.chat_input("Ask me anything...")
+    if user_prompt:
+        st.chat_message("user").markdown(user_prompt)
+        st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
 
-    # Show assistant message
-    st.chat_message("assistant").markdown(assistant_reply)
-    st.session_state.chat_messages.append({"role": "assistant", "content": assistant_reply})
+        try:
+            with st.spinner("Thinking..."):
+                response = openai.ChatCompletion.create(
+                    model="gpt-4",  # or "gpt-3.5-turbo"
+                    messages=st.session_state.chat_messages,
+                    temperature=0.7
+                )
+                assistant_reply = response.choices[0].message["content"]
+        except Exception as e:
+            assistant_reply = f"❌ Error: {str(e)}"
+
+        st.chat_message("assistant").markdown(assistant_reply)
+        st.session_state.chat_messages.append({"role": "assistant", "content": assistant_reply})
+
 
 
 
