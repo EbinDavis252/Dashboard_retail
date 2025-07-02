@@ -31,7 +31,7 @@ st.markdown("""
 # -------------------- BACKGROUND --------------------
 st.markdown("""
     <style>
-        /* Background gradient for main app */
+        /* Background gradient for the app */
         .stApp {
             background: linear-gradient(to right, #c4fda1, #c2e9fb, #cfa1fd);
             animation: gradient 15s ease infinite;
@@ -48,12 +48,12 @@ st.markdown("""
             background: linear-gradient(to bottom, #1e3c72, #2a5298);
         }
 
-        /* Sidebar title (e.g. "User Login") */
-        section[data-testid="stSidebar"] .css-1d391kg {
-            color: white;
+        /* Make "User Login" title white */
+        section[data-testid="stSidebar"] h1 {
+            color: white !important;
         }
 
-        /* Sidebar labels (e.g. "Username", "Password") */
+        /* Sidebar labels ("Username", "Password", etc.) */
         section[data-testid="stSidebar"] label {
             color: white !important;
         }
@@ -63,7 +63,7 @@ st.markdown("""
             color: white;
         }
 
-        /* Selected tab indicator (optional, for better UX) */
+        /* Highlight active tab */
         section[data-testid="stSidebar"] .stTabs [aria-selected="true"] {
             font-weight: bold;
             border-bottom: 2px solid #f0b90b;
