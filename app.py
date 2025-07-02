@@ -45,27 +45,15 @@ st.markdown("""
         /* Sidebar background */
         section[data-testid="stSidebar"] {
             background: linear-gradient(to bottom, #1e3c72, #2a5298);
-            color: white;
         }
 
-        /* Input fields in sidebar */
-        section[data-testid="stSidebar"] input {
-            background-color: black !important;
-            color: white !important;
-        }
-
-        /* Label text in sidebar */
+        /* Make sidebar labels white */
         section[data-testid="stSidebar"] label {
             color: white !important;
         }
-
-        /* Button styling */
-        section[data-testid="stSidebar"] .stButton > button {
-            background-color: #f0b90b;
-            color: black;
-        }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 # -------------------- DATABASES --------------------
