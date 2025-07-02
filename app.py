@@ -256,28 +256,41 @@ elif choice == "Dashboard":
 # -------------------- FEEDBACK --------------------
 elif choice == "Feedback":
     st.subheader("⭐ Rate Your Experience")
-    if 'star_rating' not in st.session_state:
-        st.session_state.star_rating = 0
 
-    st.markdown("### Select Star Rating:")
-    stars = st.columns(5)
-    for i in range(5):
-        if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
-            st.session_state.star_rating = i + 1
+    # Track submitted feedback users in session or a persistent store
+    if 'feedback_submitted_users' not in st.session_state:
+        st.session_state.feedback_submitted_users = set()
 
-    st.markdown(f"*Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}*")
-    comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
+    # Assume 'st.session_state.user' contains a unique user identifier (e.g., email or username)
+    current_user = st.session_state.get('user', 'anonymous')
 
-    if st.button("Submit Feedback"):
-        if st.session_state.star_rating == 0:
-            st.warning("⚠ Please select a star rating before submitting.")
-        else:
-            save_feedback(
-                st.session_state.user,
-                f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}"
-            )
-            st.success("✅ Thanks for your feedback!")
+    if current_user in st.session_state.feedback_submitted_users:
+        st.info("✅ You have already submitted feedback. Thank you!")
+    else:
+        if 'star_rating' not in st.session_state:
             st.session_state.star_rating = 0
+
+        st.markdown("### Select Star Rating:")
+        stars = st.columns(5)
+        for i in range(5):
+            if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
+                st.session_state.star_rating = i + 1
+
+        st.markdown(f"*Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}*")
+        comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
+
+        if st.button("Submit Feedback"):
+            if st.session_state.star_rating == 0:
+                st.warning("⚠ Please select a star rating before submitting.")
+            else:
+                save_feedback(
+                    current_user,
+                    f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}"
+                )
+                st.success("✅ Thanks for your feedback!")
+                st.session_state.feedback_submitted_users.add(current_user)
+                st.session_state.star_rating = 0
+
 
 # -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
