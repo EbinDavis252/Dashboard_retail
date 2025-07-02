@@ -7,9 +7,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import hashlib
 from prophet import Prophet
-import openai
-
-openai.api_key = st.secrets["openai"]["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"]
 
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="Retail Sales Dashboard", layout="wide")
@@ -149,14 +146,14 @@ if not st.session_state.auth:
     st.stop()
 
 # -------------------- APP HEADER & LOGOUT --------------------
-st.sidebar.markdown(f"👋 Welcome, **{st.session_state.user}**!")
+st.sidebar.markdown(f"👋 Welcome, *{st.session_state.user}*!")
 if st.sidebar.button("🚪 Logout"):
     st.session_state.auth = False
     st.session_state.user = ""
     st.rerun()
 
 # -------------------- MAIN MENU --------------------
-menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Predictions", "Admin Panel", "Chatbot Assistant"]
+menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Predictions", "Admin Panel"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
 # -------------------- UPLOAD --------------------
@@ -239,7 +236,7 @@ elif choice == "Dashboard":
         sns.heatmap(pivot, annot=True, fmt=".0f", cmap="YlGnBu", ax=ax)
         st.pyplot(fig)
 
-        st.markdown("### 🗓️ Monthly Trend")
+        st.markdown("### 🗓 Monthly Trend")
         data['month'] = data['date'].dt.to_period('M')
         monthly = data.groupby('month')[['revenue', 'units_sold']].sum().reset_index()
         st.bar_chart(monthly.set_index('month'))
@@ -268,7 +265,7 @@ elif choice == "Feedback":
         if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
             st.session_state.star_rating = i + 1
 
-    st.markdown(f"**Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}**")
+    st.markdown(f"*Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}*")
     comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
 
     if st.button("Submit Feedback"):
@@ -284,14 +281,14 @@ elif choice == "Feedback":
 
 # -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
-    st.subheader("🛠️ Admin Panel")
+    st.subheader("🛠 Admin Panel")
 
     if st.session_state.user != "admin":
         st.warning("⛔ You are not authorized to view this page.")
     else:
         feedback_df = pd.read_sql("SELECT * FROM feedback ORDER BY submitted_at DESC", feedback_engine)
 
-        st.markdown("### 🗣️ All Feedback")
+        st.markdown("### 🗣 All Feedback")
         if feedback_df.empty:
             st.info("No feedback submitted yet.")
         else:
@@ -314,7 +311,7 @@ elif choice == "Admin Panel":
 
         st.markdown("### 👥 Registered Users")
         users_df = pd.read_sql("SELECT username FROM users", user_engine)
-        st.success(f"**Total Users Registered:** {users_df.shape[0]}")
+        st.success(f"*Total Users Registered:* {users_df.shape[0]}")
         st.dataframe(users_df)
 # -------------------- PREDICTIONS --------------------
 elif choice == "Predictions":
@@ -390,7 +387,7 @@ elif choice == "Predictions":
             }])
 
             predicted_revenue = model.predict(input_df)[0]
-            st.success(f"📈 Predicted Revenue: **${predicted_revenue:.2f}**")
+            st.success(f"📈 Predicted Revenue: *${predicted_revenue:.2f}*")
 
     # -------------------- Seasonality Analysis --------------------
     elif prediction_option == "Seasonality Analysis":
@@ -415,38 +412,3 @@ elif choice == "Predictions":
                 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
             ])
             st.bar_chart(weekday_avg)
-    elif choice == "Chatbot Assistant":
-        st.subheader("🤖 Smart Chatbot Assistant")
-        st.markdown("Ask me anything about your data, dashboard, or forecasts!")
-
-    if "chat_messages" not in st.session_state:
-        st.session_state.chat_messages = [
-            {"role": "system", "content": "You are a helpful assistant for a retail sales dashboard app."}
-        ]
-
-    for msg in st.session_state.chat_messages[1:]:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-
-    user_prompt = st.chat_input("Ask me anything...")
-    if user_prompt:
-        st.chat_message("user").markdown(user_prompt)
-        st.session_state.chat_messages.append({"role": "user", "content": user_prompt})
-
-        try:
-            with st.spinner("Thinking..."):
-                response = openai.ChatCompletion.create(
-                    model="gpt-4",  # or "gpt-3.5-turbo"
-                    messages=st.session_state.chat_messages,
-                    temperature=0.7
-                )
-                assistant_reply = response.choices[0].message["content"]
-        except Exception as e:
-            assistant_reply = f"❌ Error: {str(e)}"
-
-        st.chat_message("assistant").markdown(assistant_reply)
-        st.session_state.chat_messages.append({"role": "assistant", "content": assistant_reply})
-
-
-
-
