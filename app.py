@@ -155,7 +155,7 @@ if st.sidebar.button("🚪 Logout"):
     st.rerun()
 
 # -------------------- MAIN MENU --------------------
-menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Predictions", "Admin Panel"]
+menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Predictions", "Admin Panel", "Chatbot Assistant"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
 # -------------------- UPLOAD --------------------
