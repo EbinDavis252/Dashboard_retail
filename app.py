@@ -7,6 +7,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import hashlib
 from prophet import Prophet
+import openai
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="Retail Sales Dashboard", layout="wide")
