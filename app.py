@@ -31,7 +31,6 @@ st.markdown("""
 # -------------------- BACKGROUND --------------------
 st.markdown("""
     <style>
-        /* Background gradient for the app */
         .stApp {
             background: linear-gradient(to right, #c4fda1, #c2e9fb, #cfa1fd);
             animation: gradient 15s ease infinite;
@@ -42,35 +41,8 @@ st.markdown("""
             50% {background-position: 100% 50%;}
             100% {background-position: 0% 50%;}
         }
-
-        /* Sidebar background */
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(to bottom, #1e3c72, #2a5298);
-        }
-
-        /* Make "User Login" title white */
-        section[data-testid="stSidebar"] h1 {
-            color: white !important;
-        }
-
-        /* Sidebar labels ("Username", "Password", etc.) */
-        section[data-testid="stSidebar"] label {
-            color: white !important;
-        }
-
-        /* Sidebar tab labels ("Login", "Register") */
-        section[data-testid="stSidebar"] .stTabs [data-baseweb="tab"] {
-            color: white;
-        }
-
-        /* Highlight active tab */
-        section[data-testid="stSidebar"] .stTabs [aria-selected="true"] {
-            font-weight: bold;
-            border-bottom: 2px solid #f0b90b;
-        }
     </style>
 """, unsafe_allow_html=True)
-
 
 # -------------------- DATABASES --------------------
 engine = sqlalchemy.create_engine('sqlite:///sales.db')
@@ -143,12 +115,9 @@ def save_to_db(df):
 def load_data():
     try:
         df = pd.read_sql("SELECT * FROM sales", engine)
-        # Normalize column names: lower case, strip spaces, replace spaces with underscores
-        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-        df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        df['date'] = pd.to_datetime(df['date'])
         return df
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
+    except:
         return pd.DataFrame()
 
 def clear_db():
@@ -159,20 +128,6 @@ def clear_db():
 @st.cache_data
 def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
-def recreate_sales_table():
-    with engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS sales"))
-        conn.execute(text("""
-            CREATE TABLE sales (
-                region TEXT,
-                product TEXT,
-                date TEXT,
-                units_sold INTEGER,
-                revenue REAL
-            )
-        """))
-        conn.commit()
-    st.success("✅ Recreated 'sales' table with correct schema.")
 
 # -------------------- SESSION SETUP --------------------
 if 'auth' not in st.session_state:
@@ -206,20 +161,34 @@ if not st.session_state.auth:
             else:
                 st.error("❌ Username already exists.")
     st.stop()
+st.markdown("""
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .welcome-banner {
+            animation: fadeInUp 1s ease-out;
+        }
+    </style>
+    <div class="welcome-banner" style="text-align:center; padding: 2rem 1rem;
+                border-radius: 15px; background: linear-gradient(to right, #89f7fe, #66a6ff);
+                color: #ffffff; font-size: 2.5rem; font-weight: bold;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                box-shadow: 0 0 20px rgba(0,0,0,0.3);">
+        👋 Welcome to the <span style="color: #ffdf00;">Retail Sales Dashboard</span>!
+    </div>
+""", unsafe_allow_html=True)
 
 # -------------------- APP HEADER & LOGOUT --------------------
-st.sidebar.markdown(
-    f"<span style='color:white; font-weight:bold;'>👋 Welcome, {st.session_state.user}</span>",
-    unsafe_allow_html=True
-)
-
+st.sidebar.markdown(f"👋 Welcome, {st.session_state.user}!")
 if st.sidebar.button("🚪 Logout"):
     st.session_state.auth = False
     st.session_state.user = ""
     st.rerun()
 
 # -------------------- MAIN MENU --------------------
-menu = ["Upload Data", "View Data", "Dashboard", "Predictions", "Admin Panel", "Feedback"]
+menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Predictions", "Admin Panel"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
 # -------------------- UPLOAD --------------------
@@ -261,7 +230,6 @@ elif choice == "View Data":
 elif choice == "Dashboard":
     st.subheader("📊 Sales Dashboard")
     data = load_data()
-    st.write("Columns in loaded data:", data.columns.tolist())
     if data.empty:
         st.warning("⚠ No data found.")
     else:
