@@ -41,6 +41,27 @@ st.markdown("""
             50% {background-position: 100% 50%;}
             100% {background-position: 0% 50%;}
         }
+
+        /* Sidebar custom color */
+        section[data-testid="stSidebar"] {
+            background: linear-gradient(to bottom, #1e3c72, #2a5298);
+            color: white;
+        }
+
+        section[data-testid="stSidebar"] .css-1v3fvcr {
+            color: white;
+        }
+
+        section[data-testid="stSidebar"] label,
+        section[data-testid="stSidebar"] input,
+        section[data-testid="stSidebar"] .st-bn {
+            color: white !important;
+        }
+
+        section[data-testid="stSidebar"] .stButton>button {
+            background-color: #f0b90b;
+            color: black;
+        }
     </style>
 """, unsafe_allow_html=True)
 
