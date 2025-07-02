@@ -42,26 +42,25 @@ st.markdown("""
             100% {background-position: 0% 50%;}
         }
 
-        /* Sidebar styling */
+        /* Sidebar background */
         section[data-testid="stSidebar"] {
             background: linear-gradient(to bottom, #1e3c72, #2a5298);
             color: white;
         }
 
-        /* Make Username and Password labels black */
-        section[data-testid="stSidebar"] label {
-            color: black !important;
-            font-weight: bold;
+        /* Input fields in sidebar */
+        section[data-testid="stSidebar"] input {
+            background-color: black !important;
+            color: white !important;
         }
 
-        /* Input fields and text color */
-        section[data-testid="stSidebar"] input {
-            color: black !important;
-            background-color: white !important;
+        /* Label text in sidebar */
+        section[data-testid="stSidebar"] label {
+            color: white !important;
         }
 
         /* Button styling */
-        section[data-testid="stSidebar"] .stButton>button {
+        section[data-testid="stSidebar"] .stButton > button {
             background-color: #f0b90b;
             color: black;
         }
