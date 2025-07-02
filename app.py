@@ -257,15 +257,9 @@ elif choice == "Dashboard":
 elif choice == "Feedback":
     st.subheader("⭐ Rate Your Experience")
 
-    # Track submitted feedback users in session or a persistent store
-    if 'feedback_submitted_users' not in st.session_state:
-        st.session_state.feedback_submitted_users = set()
-
-    # Assume 'st.session_state.user' contains a unique user identifier (e.g., email or username)
-    current_user = st.session_state.get('user', 'anonymous')
-
-    if current_user in st.session_state.feedback_submitted_users:
-        st.info("✅ You have already submitted feedback. Thank you!")
+    # Check if user has already submitted feedback
+    if st.session_state.get("feedback_submitted", False):
+        st.info("📝 You have already submitted feedback. Thank you!")
     else:
         if 'star_rating' not in st.session_state:
             st.session_state.star_rating = 0
@@ -284,13 +278,12 @@ elif choice == "Feedback":
                 st.warning("⚠ Please select a star rating before submitting.")
             else:
                 save_feedback(
-                    current_user,
+                    st.session_state.user,
                     f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}"
                 )
                 st.success("✅ Thanks for your feedback!")
-                st.session_state.feedback_submitted_users.add(current_user)
+                st.session_state.feedback_submitted = True
                 st.session_state.star_rating = 0
-
 
 # -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
