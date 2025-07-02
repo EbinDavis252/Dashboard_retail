@@ -292,37 +292,6 @@ elif choice == "Dashboard":
         st.markdown("### 🔬 Correlation Matrix")
         st.dataframe(data.corr(numeric_only=True).round(2))
 
-# -------------------- FEEDBACK --------------------
-elif choice == "Feedback":
-    st.subheader("⭐ Rate Your Experience")
-
-    # Check if user has already submitted feedback
-    if st.session_state.get("feedback_submitted", False):
-        st.info("📝 You have already submitted feedback. Thank you!")
-    else:
-        if 'star_rating' not in st.session_state:
-            st.session_state.star_rating = 0
-
-        st.markdown("### Select Star Rating:")
-        stars = st.columns(5)
-        for i in range(5):
-            if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
-                st.session_state.star_rating = i + 1
-
-        st.markdown(f"*Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}*")
-        comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
-
-        if st.button("Submit Feedback"):
-            if st.session_state.star_rating == 0:
-                st.warning("⚠ Please select a star rating before submitting.")
-            else:
-                save_feedback(
-                    st.session_state.user,
-                    f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}"
-                )
-                st.success("✅ Thanks for your feedback!")
-                st.session_state.feedback_submitted = True
-                st.session_state.star_rating = 0
 
 # -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
@@ -457,3 +426,34 @@ elif choice == "Predictions":
                 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
             ])
             st.bar_chart(weekday_avg)
+    # -------------------- FEEDBACK --------------------
+elif choice == "Feedback":
+    st.subheader("⭐ Rate Your Experience")
+
+    # Check if user has already submitted feedback
+    if st.session_state.get("feedback_submitted", False):
+        st.info("📝 You have already submitted feedback. Thank you!")
+    else:
+        if 'star_rating' not in st.session_state:
+            st.session_state.star_rating = 0
+
+        st.markdown("### Select Star Rating:")
+        stars = st.columns(5)
+        for i in range(5):
+            if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
+                st.session_state.star_rating = i + 1
+
+        st.markdown(f"*Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}*")
+        comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
+
+        if st.button("Submit Feedback"):
+            if st.session_state.star_rating == 0:
+                st.warning("⚠ Please select a star rating before submitting.")
+            else:
+                save_feedback(
+                    st.session_state.user,
+                    f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}"
+                )
+                st.success("✅ Thanks for your feedback!")
+                st.session_state.feedback_submitted = True
+                st.session_state.star_rating = 0
