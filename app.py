@@ -42,29 +42,27 @@ st.markdown("""
             100% {background-position: 0% 50%;}
         }
 
-        /* Sidebar custom color */
+        /* Sidebar background */
         section[data-testid="stSidebar"] {
             background: linear-gradient(to bottom, #1e3c72, #2a5298);
             color: white;
         }
 
-        section[data-testid="stSidebar"] .css-1v3fvcr {
-            color: white;
-        }
-
-        section[data-testid="stSidebar"] label,
-        section[data-testid="stSidebar"] input,
-        section[data-testid="stSidebar"] .st-bn {
-            color: white !important;
-        }
-
+        /* Sidebar buttons */
         section[data-testid="stSidebar"] .stButton>button {
             background-color: #f0b90b;
             color: black;
         }
+
+        /* Make username and password labels black */
+        section[data-testid="stSidebar"] label:has(input[type="text"]),
+        section[data-testid="stSidebar"] label:has(input[type="password"]) {
+            color: black !important;
+            font-weight: bold;
+        }
+
     </style>
 """, unsafe_allow_html=True)
-
 
 # -------------------- DATABASES --------------------
 engine = sqlalchemy.create_engine('sqlite:///sales.db')
