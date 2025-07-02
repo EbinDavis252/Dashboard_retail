@@ -143,9 +143,12 @@ def save_to_db(df):
 def load_data():
     try:
         df = pd.read_sql("SELECT * FROM sales", engine)
-        df['date'] = pd.to_datetime(df['date'])
+        # Normalize column names: lower case, strip spaces, replace spaces with underscores
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+        df['date'] = pd.to_datetime(df['date'], errors='coerce')
         return df
-    except:
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
 def clear_db():
@@ -156,6 +159,20 @@ def clear_db():
 @st.cache_data
 def convert_df(df):
     return df.to_csv(index=False).encode('utf-8')
+def recreate_sales_table():
+    with engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS sales"))
+        conn.execute(text("""
+            CREATE TABLE sales (
+                region TEXT,
+                product TEXT,
+                date TEXT,
+                units_sold INTEGER,
+                revenue REAL
+            )
+        """))
+        conn.commit()
+    st.success("✅ Recreated 'sales' table with correct schema.")
 
 # -------------------- SESSION SETUP --------------------
 if 'auth' not in st.session_state:
@@ -244,6 +261,7 @@ elif choice == "View Data":
 elif choice == "Dashboard":
     st.subheader("📊 Sales Dashboard")
     data = load_data()
+    st.write("Columns in loaded data:", data.columns.tolist())
     if data.empty:
         st.warning("⚠ No data found.")
     else:
@@ -269,7 +287,7 @@ elif choice == "Dashboard":
         st.markdown("### 📈 Key Performance Indicators")
         c1, c2 = st.columns(2)
         c1.metric("Total Revenue", f"${data['revenue'].sum():,.2f}")
-        c2.metric("units_sold", f"{data['units_sold'].sum():,.0f}")
+        c2.metric("Units Sold", f"{data['units_sold'].sum():,.0f}")
 
         st.markdown("### 📅 Revenue Over Time")
         daily = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
