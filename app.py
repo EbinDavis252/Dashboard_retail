@@ -189,7 +189,10 @@ if not st.session_state.auth:
                 st.error("❌ Username already exists.")
     st.stop()
 # -------------------- APP HEADER & LOGOUT --------------------
-st.sidebar.markdown(f"👋 Welcome, {st.session_state.user}!")
+st.sidebar.markdown(
+    f"<span style='color:white; font-weight:bold;'>👋 Welcome, {st.session_state.user}</span>",
+    unsafe_allow_html=True
+)
 if st.sidebar.button("🚪 Logout"):
     st.session_state.auth = False
     st.session_state.user = ""
