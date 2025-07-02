@@ -41,30 +41,8 @@ st.markdown("""
             50% {background-position: 100% 50%;}
             100% {background-position: 0% 50%;}
         }
-
-        /* Sidebar custom color */
-        section[data-testid="stSidebar"] {
-            background: linear-gradient(to bottom, #1e3c72, #2a5298);
-            color: white;
-        }
-
-        section[data-testid="stSidebar"] .css-1v3fvcr {
-            color: white;
-        }
-
-        section[data-testid="stSidebar"] label,
-        section[data-testid="stSidebar"] input,
-        section[data-testid="stSidebar"] .st-bn {
-            color: white !important;
-        }
-
-        section[data-testid="stSidebar"] .stButton>button {
-            background-color: #f0b90b;
-            color: black;
-        }
     </style>
 """, unsafe_allow_html=True)
-
 
 # -------------------- DATABASES --------------------
 engine = sqlalchemy.create_engine('sqlite:///sales.db')
@@ -185,14 +163,14 @@ if not st.session_state.auth:
     st.stop()
 
 # -------------------- APP HEADER & LOGOUT --------------------
-st.sidebar.markdown(f"👋 Welcome, *{st.session_state.user}*!")
+st.sidebar.markdown(f"👋 Welcome, {st.session_state.user}!")
 if st.sidebar.button("🚪 Logout"):
     st.session_state.auth = False
     st.session_state.user = ""
     st.rerun()
 
 # -------------------- MAIN MENU --------------------
-menu = ["Upload Data", "View Data", "Dashboard", "Feedback", "Predictions", "Admin Panel"]
+menu = ["Upload Data", "View Data", "Dashboard", "Predictions", "Admin Panel", "Feedback"]
 choice = st.sidebar.selectbox("📂 Navigate", menu)
 
 # -------------------- UPLOAD --------------------
@@ -292,6 +270,37 @@ elif choice == "Dashboard":
         st.markdown("### 🔬 Correlation Matrix")
         st.dataframe(data.corr(numeric_only=True).round(2))
 
+# -------------------- FEEDBACK --------------------
+elif choice == "Feedback":
+    st.subheader("⭐ Rate Your Experience")
+
+    # Check if user has already submitted feedback
+    if st.session_state.get("feedback_submitted", False):
+        st.info("📝 You have already submitted feedback. Thank you!")
+    else:
+        if 'star_rating' not in st.session_state:
+            st.session_state.star_rating = 0
+
+        st.markdown("### Select Star Rating:")
+        stars = st.columns(5)
+        for i in range(5):
+            if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
+                st.session_state.star_rating = i + 1
+
+        st.markdown(f"Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}")
+        comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
+
+        if st.button("Submit Feedback"):
+            if st.session_state.star_rating == 0:
+                st.warning("⚠ Please select a star rating before submitting.")
+            else:
+                save_feedback(
+                    st.session_state.user,
+                    f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}"
+                )
+                st.success("✅ Thanks for your feedback!")
+                st.session_state.feedback_submitted = True
+                st.session_state.star_rating = 0
 
 # -------------------- ADMIN PANEL --------------------
 elif choice == "Admin Panel":
@@ -325,7 +334,7 @@ elif choice == "Admin Panel":
 
         st.markdown("### 👥 Registered Users")
         users_df = pd.read_sql("SELECT username FROM users", user_engine)
-        st.success(f"*Total Users Registered:* {users_df.shape[0]}")
+        st.success(f"Total Users Registered: {users_df.shape[0]}")
         st.dataframe(users_df)
 # -------------------- PREDICTIONS --------------------
 elif choice == "Predictions":
@@ -401,7 +410,7 @@ elif choice == "Predictions":
             }])
 
             predicted_revenue = model.predict(input_df)[0]
-            st.success(f"📈 Predicted Revenue: *${predicted_revenue:.2f}*")
+            st.success(f"📈 Predicted Revenue: ${predicted_revenue:.2f}")
 
     # -------------------- Seasonality Analysis --------------------
     elif prediction_option == "Seasonality Analysis":
@@ -426,34 +435,3 @@ elif choice == "Predictions":
                 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'
             ])
             st.bar_chart(weekday_avg)
-    # -------------------- FEEDBACK --------------------
-elif choice == "Feedback":
-    st.subheader("⭐ Rate Your Experience")
-
-    # Check if user has already submitted feedback
-    if st.session_state.get("feedback_submitted", False):
-        st.info("📝 You have already submitted feedback. Thank you!")
-    else:
-        if 'star_rating' not in st.session_state:
-            st.session_state.star_rating = 0
-
-        st.markdown("### Select Star Rating:")
-        stars = st.columns(5)
-        for i in range(5):
-            if stars[i].button("⭐" if st.session_state.star_rating > i else "☆", key=f"star{i}"):
-                st.session_state.star_rating = i + 1
-
-        st.markdown(f"*Your Rating: {st.session_state.star_rating} star{'s' if st.session_state.star_rating > 1 else ''}*")
-        comment = st.text_area("💬 Any comments? (optional)", max_chars=300)
-
-        if st.button("Submit Feedback"):
-            if st.session_state.star_rating == 0:
-                st.warning("⚠ Please select a star rating before submitting.")
-            else:
-                save_feedback(
-                    st.session_state.user,
-                    f"Rating: {st.session_state.star_rating} stars | Comment: {comment.strip() or 'No comment'}"
-                )
-                st.success("✅ Thanks for your feedback!")
-                st.session_state.feedback_submitted = True
-                st.session_state.star_rating = 0
