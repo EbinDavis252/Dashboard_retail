@@ -42,25 +42,29 @@ st.markdown("""
             100% {background-position: 0% 50%;}
         }
 
-        /* Sidebar background */
+        /* Sidebar styling */
         section[data-testid="stSidebar"] {
             background: linear-gradient(to bottom, #1e3c72, #2a5298);
             color: white;
         }
 
-        /* Sidebar buttons */
-        section[data-testid="stSidebar"] .stButton>button {
-            background-color: #f0b90b;
-            color: black;
-        }
-
-        /* Make username and password labels black */
-        section[data-testid="stSidebar"] label:has(input[type="text"]),
-        section[data-testid="stSidebar"] label:has(input[type="password"]) {
+        /* Make Username and Password labels black */
+        section[data-testid="stSidebar"] label {
             color: black !important;
             font-weight: bold;
         }
 
+        /* Input fields and text color */
+        section[data-testid="stSidebar"] input {
+            color: black !important;
+            background-color: white !important;
+        }
+
+        /* Button styling */
+        section[data-testid="stSidebar"] .stButton>button {
+            background-color: #f0b90b;
+            color: black;
+        }
     </style>
 """, unsafe_allow_html=True)
 
