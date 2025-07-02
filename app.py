@@ -269,7 +269,7 @@ elif choice == "Dashboard":
         st.markdown("### 📈 Key Performance Indicators")
         c1, c2 = st.columns(2)
         c1.metric("Total Revenue", f"${data['revenue'].sum():,.2f}")
-        c2.metric("Units Sold", f"{data['units_sold'].sum():,.0f}")
+        c2.metric("units_sold", f"{data['units_sold'].sum():,.0f}")
 
         st.markdown("### 📅 Revenue Over Time")
         daily = data.groupby('date').agg({'revenue': 'sum'}).reset_index()
